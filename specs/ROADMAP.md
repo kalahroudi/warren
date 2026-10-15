@@ -41,9 +41,17 @@ One row is one spec is one PR. Mockup: https://claude.ai/artifact/QdJZC1qARd8Sbc
 | 034 | Logs UI | 8 Polish |
 | 035 | Settings and optional shell shim | 8 Polish |
 | 036 | Onboarding and import from other local dev tools | 8 Polish |
+| 037 | Database browser: auto-connect to Warren services, schema tree, read-only table viewer | 9 Database tools |
+| 038 | Query editor with history, saved queries and a result grid | 9 Database tools |
+| 039 | Row editing with safe, reviewable changes (insert, update, delete in a transaction) | 9 Database tools |
+| 040 | Structure view and schema editing (tables, columns, indexes, foreign keys) | 9 Database tools |
+| 041 | Import and export (CSV, JSON, SQL dump) and one-click snapshot and restore | 9 Database tools |
+| 042 | MCP database tools: schema and read queries open, writes ask first | 9 Database tools |
 
 ## Notes
 
 - 025 and 026 implement the same `ShareProvider` in two modes: **hosted** (uses the Warren API) and **self-hosted** (user's own Relay server, or their own Cloudflare account directly). The app has one setting: *Relay endpoint*.
 - 024 (Tailscale) needs no backend and can ship before 025.
 - 029 should land before 031 so hibernation decisions are based on real numbers.
+- Phase 9 builds on the service manager (015, 016, 017). A site's `[services]` entry in `.warren.toml` becomes a ready-made connection, so a database is one click from the site that uses it. It also reaches databases outside Warren (any host, with credentials in the Keychain) after 037.
+- 042 follows the agent-parity rule in 000: reads are open, anything that changes data asks first, and the user sees the exact SQL before approving.
