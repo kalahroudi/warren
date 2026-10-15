@@ -21,7 +21,15 @@ struct PopoverView: View {
             footer
         }
         .frame(width: 392)
+        .fixedSize(horizontal: false, vertical: true)
+        .background(PanelFitter(layoutKey: layoutKey))
         .onExitCommand { NSApp.keyWindow?.close() }
+    }
+
+    /// Changes whenever something that affects the popover's height changes.
+    private var layoutKey: String {
+        let snapshot = model.snapshot
+        return "\(snapshot.sites.count)-\(snapshot.services.count)-\(snapshot.update != nil)-\(snapshot.paused)"
     }
 
     private var header: some View {
@@ -36,7 +44,7 @@ struct PopoverView: View {
             }
             Spacer()
             Button { model.togglePaused() } label: {
-                Image(systemName: model.snapshot.paused ? "play.fill" : "pause.fill")
+                Image(systemName: model.snapshot.paused ? "play.fill" : "pause.fill").frame(width: 16, height: 16)
             }
             .help(model.snapshot.paused ? "Resume everything" : "Pause everything")
             Menu {
@@ -45,9 +53,10 @@ struct PopoverView: View {
                 Button("Quit Warren") { NSApplication.shared.terminate(nil) }
                     .keyboardShortcut("q")
             } label: {
-                Image(systemName: "gearshape")
+                Image(systemName: "gearshape").frame(width: 16, height: 16)
             }
             .menuIndicator(.hidden)
+            .fixedSize()
             .help("Settings")
         }
         .buttonStyle(.bordered)
@@ -163,5 +172,28 @@ struct PopoverView: View {
         .padding(.horizontal, 16)
         .padding(.vertical, 12)
         .overlay(alignment: .top) { Divider() }
+    }
+}
+
+/// The menu bar panel keeps its opening height when the content shrinks or grows, which leaves empty bands
+/// above and below. This resizes the panel to fit its content and keeps the top edge under the menu bar.
+private struct PanelFitter: NSViewRepresentable {
+    /// Gives SwiftUI a reason to call `updateNSView` when the content's height may have changed.
+    let layoutKey: String
+
+    func makeNSView(context _: Context) -> NSView {
+        NSView()
+    }
+
+    func updateNSView(_ view: NSView, context _: Context) {
+        DispatchQueue.main.async {
+            guard let window = view.window, let content = window.contentView else { return }
+            let target = window.frameRect(forContentRect: NSRect(origin: .zero, size: content.fittingSize)).size
+            guard abs(window.frame.height - target.height) > 0.5 else { return }
+            var frame = window.frame
+            frame.origin.y += frame.height - target.height
+            frame.size.height = target.height
+            window.setFrame(frame, display: true)
+        }
     }
 }
