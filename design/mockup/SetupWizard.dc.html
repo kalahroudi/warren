@@ -1,0 +1,91 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Warren setup wizard, trust step</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<style>
+body{margin:0;font-family:-apple-system,"SF Pro Text",system-ui,sans-serif}
+button{font-family:inherit}
+</style>
+</helmet>
+<div style="width:1180px;height:760px;position:relative;background:#15171c;color:#e8eaed;overflow:hidden;display:flex;align-items:center;justify-content:center">
+  <div style="position:absolute;inset:0;background:radial-gradient(800px 500px at 30% 0%,#1e3a44 0%,transparent 65%),#0e1013;opacity:.9"></div>
+  <div style="position:relative;width:960px;height:640px;border-radius:18px;background:#1a1d23;border:1px solid rgba(255,255,255,.1);box-shadow:0 30px 80px rgba(0,0,0,.6);display:flex;overflow:hidden">
+    <!-- rail -->
+    <div style="width:270px;flex:none;background:#16181d;border-right:1px solid rgba(255,255,255,.07);padding:26px 18px;box-sizing:border-box;display:flex;flex-direction:column;gap:4px">
+      <div style="display:flex;align-items:center;gap:10px;padding:0 8px 4px">
+        <div style="width:30px;height:30px;border-radius:9px;background:linear-gradient(145deg,#7bf0b8,#2fbf8a);display:flex;align-items:center;justify-content:center"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#06281b" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 21V12a8 8 0 0 1 16 0v9"/><path d="M9 21v-5a3 3 0 0 1 6 0v5"/></svg></div>
+        <div style="font-size:17px;font-weight:650;letter-spacing:-.01em">Set up Warren</div>
+      </div>
+      <div style="font-size:12px;color:#8f96a1;padding:0 8px 16px;line-height:1.45">About two minutes. You can quit and pick up where you left off.</div>
+      <sc-for list="{{steps}}" as="s" hint-placeholder-count="6">
+        <div style="display:flex;align-items:center;gap:12px;padding:10px;border-radius:10px;background:{{s.bg}};border:1px solid {{s.border}}">
+          <span style="width:22px;height:22px;border-radius:50%;flex:none;display:flex;align-items:center;justify-content:center;font-size:11.5px;font-weight:700;background:{{s.dotBg}};color:{{s.dotColor}};border:{{s.dotBorder}}">{{s.mark}}</span>
+          <span style="font-size:13.5px;color:{{s.color}};font-weight:{{s.weight}}">{{s.label}}</span>
+        </div>
+      </sc-for>
+      <div style="flex-grow:1"></div>
+      <div style="font-size:11.5px;color:#7d848f;padding:0 8px;line-height:1.5">Everything here can be undone from Settings, under Setup.</div>
+    </div>
+
+    <!-- content -->
+    <div style="flex-grow:1;min-width:0;display:flex;flex-direction:column;padding:32px 36px 0;box-sizing:border-box">
+      <div style="display:flex;align-items:center;gap:10px">
+        <span style="font-size:12px;color:#7d848f;font-weight:600;letter-spacing:.06em;text-transform:uppercase">Step 3 of 6</span>
+        <span style="font-size:11.5px;padding:2px 9px;border-radius:999px;background:rgba(245,184,75,.14);color:#f6c667;font-weight:600">Not done yet</span>
+      </div>
+      <h1 style="margin:10px 0 8px;font-size:26px;font-weight:650;letter-spacing:-.02em">Trust Warren's local certificate</h1>
+      <p style="margin:0;font-size:14px;line-height:1.55;color:#b5bbc5;max-width:540px">Warren gives your sites real <strong style="color:#e8eaed;font-weight:550">https://</strong> addresses using its own local certificate authority. To make your browsers accept it, macOS needs to trust that certificate once.</p>
+
+      <div style="margin-top:22px;padding:16px 18px;border-radius:14px;background:rgba(94,230,168,.06);border:1px solid rgba(94,230,168,.22);display:flex;gap:14px">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#5ee6a8" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="flex:none;margin-top:1px"><rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/></svg>
+        <div>
+          <div style="font-size:13px;font-weight:600;color:#7fe9b4;letter-spacing:.02em">WHAT WILL CHANGE</div>
+          <div style="font-size:14px;margin-top:5px;line-height:1.5">Adds <strong style="font-weight:600">Warren Local CA</strong> to your System keychain as a trusted root.</div>
+          <div style="font-size:12.5px;color:#9aa1ac;margin-top:5px;line-height:1.5">macOS will ask for your password. Touch ID works too.</div>
+        </div>
+      </div>
+
+      <div style="margin-top:18px;display:flex;flex-direction:column;gap:11px">
+        <sc-for list="{{notes}}" as="n" hint-placeholder-count="3">
+          <div style="display:flex;gap:11px;font-size:13.5px;line-height:1.5;color:#c9ced6">
+            <span style="color:#5ee6a8;font-weight:700;flex:none">✓</span><span>{{n}}</span>
+          </div>
+        </sc-for>
+      </div>
+
+      <div style="flex-grow:1"></div>
+      <div style="display:flex;align-items:center;gap:10px;padding:16px 0 22px;border-top:1px solid rgba(255,255,255,.07)">
+        <button style="white-space:nowrap;flex:none;padding:8px 14px;border-radius:8px;border:1px solid rgba(255,255,255,.12);background:transparent;color:#e8eaed;font-size:13px;cursor:pointer">Back</button>
+        <div style="flex-grow:1;font-size:12px;color:#8f96a1">Without this, browsers show a security warning for your sites.</div>
+        <button style="white-space:nowrap;flex:none;padding:8px 14px;border-radius:8px;border:none;background:transparent;color:#9aa1ac;font-size:13px;cursor:pointer">Skip for now</button>
+        <button style="white-space:nowrap;flex:none;padding:9px 18px;border-radius:8px;border:none;background:#5ee6a8;color:#06281b;font-weight:600;font-size:13px;cursor:pointer">Trust certificate…</button>
+      </div>
+    </div>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1180,"height":760}}'>
+class Component extends DCLogic {
+  renderVals() {
+    const done = (label) => ({ label, mark: '✓', bg: 'transparent', border: 'transparent', dotBg: '#5ee6a8', dotColor: '#06281b', dotBorder: 'none', color: '#d6dae0', weight: '500' });
+    const active = (label, n) => ({ label, mark: n, bg: 'rgba(94,230,168,.09)', border: 'rgba(94,230,168,.35)', dotBg: 'transparent', dotColor: '#5ee6a8', dotBorder: '1.5px solid #5ee6a8', color: '#fff', weight: '600' });
+    const wait = (label, n) => ({ label, mark: n, bg: 'transparent', border: 'transparent', dotBg: 'transparent', dotColor: '#8f96a1', dotBorder: '1.5px solid #4a505a', color: '#8f96a1', weight: '500' });
+    return {
+      steps: [done('Welcome'), done('Local HTTPS'), active('Trust the certificate', '3'), wait('Local domains', '4'), wait('Check', '5'), wait('Done', '6')],
+      notes: [
+        'The certificate\'s private key stays on this Mac, in a folder only your account can read.',
+        'You can remove the trust any time from Settings, under Setup, with Undo.',
+        'Warren never trusts anything without asking, and never without showing what it will change.'
+      ]
+    };
+  }
+}
+</script>
+</body>
+</html>

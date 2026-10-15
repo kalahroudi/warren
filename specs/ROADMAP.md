@@ -47,9 +47,12 @@ One row is one spec is one PR. Mockup: https://claude.ai/artifact/QdJZC1qARd8Sbc
 | 040 | Structure view and schema editing (tables, columns, indexes, foreign keys) | 9 Database tools |
 | 041 | Import and export (CSV, JSON, SQL dump) and one-click snapshot and restore | 9 Database tools |
 | 042 | MCP database tools: schema and read queries open, writes ask first | 9 Database tools |
+| 043 | Background proxy and DNS (launchd) and real state in the app | 1 Core |
+| 044 | Setup wizard: first-run setup from the app, no terminal | 1 Core |
 
 ## Notes
 
+- **Build order change.** 043 and 044 come right after 006 and before 007. Specs 004 to 006 built the engine and a CLI. Until 043 and 044 land, a user cannot actually use them from the app. Everything after that should arrive with its app surface (see the *App first* principle in 000).
 - 025 and 026 implement the same `ShareProvider` in two modes: **hosted** (uses the Warren API) and **self-hosted** (user's own Relay server, or their own Cloudflare account directly). The app has one setting: *Relay endpoint*.
 - 024 (Tailscale) needs no backend and can ship before 025.
 - 029 should land before 031 so hibernation decisions are based on real numbers.
