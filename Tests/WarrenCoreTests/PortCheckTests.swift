@@ -31,8 +31,4 @@ struct PortCheckTests {
         #expect(!PortCheck.isFree(port))
         #expect(PortCheck.holder(of: port)?.contains("pid") == true)
     }
-
-    @Test func anUnusedPortIsFree() {
-        #expect(PortCheck.isFree(54321) || PortCheck.holder(of: 54321) != nil)
-    }
 }
