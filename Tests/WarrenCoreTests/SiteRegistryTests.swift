@@ -116,4 +116,27 @@ struct SiteRegistryTests {
         let paths = WarrenPaths.fromEnvironment(["WARREN_HOME": "/tmp/elsewhere"])
         #expect(paths.sitesFile.path == "/tmp/elsewhere/config/sites.json")
     }
+
+    @Test func stateDefaultsToWarrenInTheHomeFolder() throws {
+        let home = try temporaryDirectory("home")
+        #expect(WarrenPaths.fromEnvironment([:], home: home).root.lastPathComponent == "Warren")
+    }
+
+    @Test func stateStaysOutOfASourceCheckoutThatSharesTheName() throws {
+        let home = try temporaryDirectory("home")
+        let checkout = home.appendingPathComponent("Warren")
+        try FileManager.default.createDirectory(at: checkout, withIntermediateDirectories: true)
+        try "// swift-tools-version: 6.0".write(
+            to: checkout.appendingPathComponent("Package.swift"),
+            atomically: true,
+            encoding: .utf8
+        )
+        #expect(WarrenPaths.fromEnvironment([:], home: home).root.lastPathComponent == ".warren")
+    }
+
+    @Test func warrenHomeStillWinsOverTheCheckoutRule() throws {
+        let home = try temporaryDirectory("home")
+        let paths = WarrenPaths.fromEnvironment(["WARREN_HOME": "/tmp/elsewhere"], home: home)
+        #expect(paths.root.path == "/tmp/elsewhere")
+    }
 }

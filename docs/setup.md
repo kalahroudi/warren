@@ -11,6 +11,10 @@ The first time Warren runs, the setup wizard opens by itself and takes you from 
 
 Every step says what it will change before it asks, and has an Undo. Each step's state is read from the machine, not remembered, so you can quit and resume, and reopening the wizard repairs a half-finished setup. `.localhost` sites need no DNS step.
 
+## Where Warren keeps its files
+
+`~/Warren` (downloads, settings, logs). If `~/Warren` is the Warren source checkout, as it is on a case-insensitive disk when the repo is cloned to `~/warren`, Warren uses `~/.warren` instead, so nothing lands in your working tree. `WARREN_HOME` overrides both.
+
 ## Pause and resume
 
 The pause button in the menu bar popover stops the local HTTPS proxy and DNS server and keeps them off, including after you log in again, until you resume. It appears once there is something to pause.
