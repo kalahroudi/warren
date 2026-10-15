@@ -58,6 +58,7 @@ Planned, once spec 003 ships: a signed and notarized `.dmg` on GitHub Releases, 
 | **Add a site four ways** | Import from GitHub, start from a template (Next.js, SvelteKit, Hono, Laravel and more), blank project, or an existing folder. Warren reads the repo, builds a setup plan, and installs the runtimes and services it needs. |
 | **Custom local domains** | `acme.test`, `shop.localhost`, or any name you choose, with a trusted certificate. |
 | **Native services** | PostgreSQL, MySQL, Redis, Mailpit, MinIO and more as native binaries. An optional container driver covers the rest. |
+| **Database browser** | Browse tables, run queries, edit rows and change schemas for Postgres, MySQL and more, with connections created automatically from your sites. |
 | **Runtimes** | Node, Bun, PHP, Python and others, per site, picked up from `.nvmrc`, `.php-version` and friends. |
 | **Share a link** | Tailscale (free) or Cloudflare (free shared domain, paid custom domain). Run the Relay server yourself or use the hosted one. |
 | **Storage that cleans up** | Shared caches, unused-runtime cleanup and site hibernation, so dependencies do not pile up. |
