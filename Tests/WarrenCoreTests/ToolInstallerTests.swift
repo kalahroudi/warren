@@ -25,16 +25,16 @@ struct ToolInstallerTests {
         return archive
     }
 
-    private func release(for archive: URL, sha512: String) -> ToolRelease {
+    private func release(for archive: URL, checksum: ToolChecksum) -> ToolRelease {
         ToolRelease(
             name: "demo", version: "1.0.0", binaryName: "demo",
-            assets: [.current: ToolAsset(url: archive, sha512: sha512)]
+            assets: [.current: ToolAsset(url: archive, checksum: checksum)]
         )
     }
 
     @Test func installsAndMarksTheBinaryExecutable() async throws {
         let archive = try makeArchive()
-        let release = try release(for: archive, sha512: ToolInstaller.sha512Hex(of: archive))
+        let release = try release(for: archive, checksum: .sha512(ToolInstaller.sha512Hex(of: archive)))
         let binary = try await installer.install(release)
         #expect(FileManager.default.isExecutableFile(atPath: binary.path))
         #expect(installer.isInstalled(release))
@@ -43,14 +43,14 @@ struct ToolInstallerTests {
 
     @Test func aWrongChecksumIsRejectedAndNothingIsInstalled() async throws {
         let archive = try makeArchive()
-        let release = release(for: archive, sha512: String(repeating: "0", count: 128))
+        let release = release(for: archive, checksum: .sha512(String(repeating: "0", count: 128)))
         await #expect(throws: ToolInstallError.self) { try await installer.install(release) }
         #expect(!installer.isInstalled(release))
     }
 
     @Test func anArchiveWithoutTheBinaryIsRejected() async throws {
         let archive = try makeArchive(containing: "other")
-        let release = try release(for: archive, sha512: ToolInstaller.sha512Hex(of: archive))
+        let release = try release(for: archive, checksum: .sha512(ToolInstaller.sha512Hex(of: archive)))
         await #expect(throws: ToolInstallError.binaryMissing("demo")) { try await installer.install(release) }
     }
 
@@ -60,10 +60,28 @@ struct ToolInstallerTests {
         #expect(try ToolInstaller.sha512Hex(of: archive) == String(expected))
     }
 
+    @Test func sha256ChecksumsAreVerifiedToo() async throws {
+        let archive = try makeArchive()
+        let good = try release(for: archive, checksum: .sha256(ToolInstaller.sha256Hex(of: archive)))
+        _ = try await installer.install(good)
+        let bad = release(for: archive, checksum: .sha256(String(repeating: "0", count: 64)))
+        await #expect(throws: ToolInstallError.self) { try await installer.install(bad) }
+    }
+
+    @Test func theCorednsPinCoversBothArchitectures() throws {
+        for architecture in [CPUArchitecture.arm64, .intel] {
+            let asset = try ToolRelease.coredns.asset(for: architecture)
+            guard case let .sha256(hash) = asset.checksum else { Issue.record("expected a SHA-256 pin"); continue }
+            #expect(hash.count == 64)
+            #expect(asset.url.absoluteString.hasPrefix("https://github.com/coredns/coredns/releases/download/v1.14.7/"))
+        }
+    }
+
     @Test func theCaddyPinCoversBothArchitectures() throws {
         for architecture in [CPUArchitecture.arm64, .intel] {
             let asset = try ToolRelease.caddy.asset(for: architecture)
-            #expect(asset.sha512.count == 128)
+            guard case let .sha512(hash) = asset.checksum else { Issue.record("expected a SHA-512 pin"); continue }
+            #expect(hash.count == 128)
             #expect(asset.url.absoluteString
                 .hasPrefix("https://github.com/caddyserver/caddy/releases/download/v2.11.7/"))
         }

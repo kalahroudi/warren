@@ -35,6 +35,7 @@ just check   # the single gate
 just dev     # build and launch a dev Warren.app
 just warren site list --json   # build and run the CLI; see docs/warren-toml.md
 just warren proxy status       # local HTTPS proxy; see docs/proxy.md
+just warren dns status         # local DNS for your domains; see docs/dns.md
 ```
 
 `just check` is the single gate and needs a matching Xcode toolchain (accept the Xcode license first: `sudo xcodebuild -license accept`). `just dev` builds with SwiftPM and launches the app.

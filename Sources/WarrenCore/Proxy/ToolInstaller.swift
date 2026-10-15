@@ -46,17 +46,33 @@ public struct ToolInstaller: Sendable {
         let archive = try await download(asset.url)
         defer { try? FileManager.default.removeItem(at: archive) }
 
-        let actual = try Self.sha512Hex(of: archive)
-        guard actual == asset.sha512 else {
-            throw ToolInstallError.checksumMismatch(expected: asset.sha512, actual: actual)
+        let (expected, actual) = try Self.compare(archive, against: asset.checksum)
+        guard actual == expected else {
+            throw ToolInstallError.checksumMismatch(expected: expected, actual: actual)
         }
         return try unpack(archive, release: release)
     }
 
     public static func sha512Hex(of file: URL) throws -> String {
+        try digest(of: file, using: SHA512())
+    }
+
+    public static func sha256Hex(of file: URL) throws -> String {
+        try digest(of: file, using: SHA256())
+    }
+
+    /// The pinned checksum and the one computed from the file, using the pinned algorithm.
+    static func compare(_ file: URL, against checksum: ToolChecksum) throws -> (expected: String, actual: String) {
+        switch checksum {
+        case let .sha256(expected): try (expected, sha256Hex(of: file))
+        case let .sha512(expected): try (expected, sha512Hex(of: file))
+        }
+    }
+
+    private static func digest(of file: URL, using initial: some HashFunction) throws -> String {
         let handle = try FileHandle(forReadingFrom: file)
         defer { try? handle.close() }
-        var hasher = SHA512()
+        var hasher = initial
         while let chunk = try handle.read(upToCount: 1 << 20), !chunk.isEmpty {
             hasher.update(data: chunk)
         }

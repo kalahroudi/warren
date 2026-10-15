@@ -38,36 +38,10 @@ private func parsePorts(_ arguments: [String]) throws -> ProxyPorts {
     return ports
 }
 
-struct CLIError: Error, LocalizedError {
-    let message: String
-    init(_ message: String) {
-        self.message = message
-    }
-
-    var errorDescription: String? {
-        message
-    }
-}
-
 private func printSkipped(_ plan: ProxyPlan) {
     for skipped in plan.skipped {
         print("  skipped \(skipped.siteID): \(skipped.reason)")
     }
-}
-
-private func runForeground(_ binary: URL, _ arguments: [String]) throws -> Int32 {
-    let process = Process()
-    process.executableURL = binary
-    process.arguments = arguments
-    try process.run()
-    process.waitUntilExit()
-    return process.terminationStatus
-}
-
-private func confirm(_ question: String) -> Bool {
-    print("\(question) [y/N] ", terminator: "")
-    guard let answer = readLine()?.lowercased() else { return false }
-    return answer == "y" || answer == "yes"
 }
 
 func runProxy(_ arguments: [String], paths: WarrenPaths) async throws {
