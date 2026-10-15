@@ -35,4 +35,4 @@ just dev     # build and launch a dev Warren.app
 just warren site list --json   # build and run the CLI; see docs/warren-toml.md
 ```
 
-`just dev` compiles with `swiftc` alone (see `scripts/build-app.sh`), picking an SDK the installed compiler can read, so it works with only the Command Line Tools. `just check` uses SwiftPM, which needs a matching toolchain (CI has one). If SwiftPM crashes locally with an SDK/compiler mismatch, rely on `just dev` and CI.
+`just check` is the single gate and needs a matching Xcode toolchain (accept the Xcode license first: `sudo xcodebuild -license accept`). `just dev` builds with SwiftPM and launches the app.

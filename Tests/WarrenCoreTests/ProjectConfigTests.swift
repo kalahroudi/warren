@@ -38,6 +38,23 @@ struct ProjectConfigTests {
         #expect(throws: ConfigError.self) { try ProjectConfig.parse("name = 3") }
         #expect(throws: ConfigError.self) { try ProjectConfig.parse("[run]\nport = \"x\"") }
         #expect(throws: ConfigError.invalidPort(99999)) { try ProjectConfig.parse("[run]\nport = 99999") }
+        #expect(throws: ConfigError.self) { try ProjectConfig.parse("name = = 3") }
+    }
+
+    @Test func syntaxErrorsReportTheLine() {
+        do {
+            _ = try ProjectConfig.parse("name = \"x\"\n\nport = = 3")
+            Issue.record("expected a syntax error")
+        } catch {
+            #expect(error.localizedDescription.contains("Line 3"))
+        }
+    }
+
+    @Test func multilineArraysAndInlineTablesAreAccepted() throws {
+        let config = try ProjectConfig
+            .parse("domains = [\n  \"a.test\",\n  \"b.test\",\n]\nruntime = { node = \"22\" }")
+        #expect(config.domains == ["a.test", "b.test"])
+        #expect(config.runtimes == ["node": "22"])
     }
 
     @Test func domainRules() throws {

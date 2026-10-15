@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 import Foundation
+import TOMLDecoder
 
 /// The contents of a project's `.warren.toml`, validated. Nothing here is acted on yet.
 public struct ProjectConfig: Equatable, Codable, Sendable {
@@ -17,14 +18,17 @@ public struct ProjectConfig: Equatable, Codable, Sendable {
     public init() {}
 
     public static func parse(_ text: String) throws -> ProjectConfig {
-        let document = try TOML.parse(text)
+        let root: TOMLTable
+        do {
+            root = try TOMLTable(source: text)
+        } catch {
+            throw ConfigError.invalid(String(describing: error))
+        }
         var config = ProjectConfig()
-        try config.readTopLevel(document.tables[""] ?? [:])
-        try config.readRuntime(document.tables["runtime"] ?? [:])
-        try config.readRun(document.tables["run"] ?? [:])
-        try config.readServices(document.tables["services"] ?? [:])
-        for table in document.tables.keys.sorted() where !["", "runtime", "run", "services"].contains(table) {
-            config.warnings.append("unknown table [\(table)] ignored")
+        do {
+            try config.read(root)
+        } catch let error as TOMLError {
+            throw ConfigError.invalid(String(describing: error))
         }
         return config
     }
@@ -36,63 +40,48 @@ public struct ProjectConfig: Equatable, Codable, Sendable {
         return try parse(String(contentsOf: file, encoding: .utf8))
     }
 
-    private mutating func readTopLevel(_ table: [String: TOMLValue]) throws {
-        for (key, value) in table.sorted(by: { $0.key < $1.key }) {
-            switch (key, value) {
-            case let ("name", .string(text)): name = text
-            case let ("domains", .strings(list)): domains = try list.map(DomainName.normalize)
-            case ("name", _), ("domains", _): throw ConfigError.wrongType(
-                    key: key,
-                    expected: key == "name" ? "a string" : "an array of strings"
-                )
-            default: warnings.append("unknown key '\(key)' ignored")
+    private static let sections: Set = ["runtime", "run", "services"]
+
+    private mutating func read(_ root: TOMLTable) throws {
+        for key in root.keys.sorted() {
+            switch key {
+            case "name":
+                name = try root.string(forKey: key)
+            case "domains":
+                let list = try root.array(forKey: key)
+                domains = try (0 ..< list.count).map { try DomainName.normalize(list.string(atIndex: $0)) }
+            case _ where Self.sections.contains(key):
+                try readSection(key, root.table(forKey: key))
+            default:
+                warnings.append("unknown key '\(key)' ignored")
             }
         }
     }
 
-    private mutating func readRuntime(_ table: [String: TOMLValue]) throws {
-        for (key, value) in table.sorted(by: { $0.key < $1.key }) {
-            guard case let .string(version) = value else { throw ConfigError.wrongType(
-                key: "runtime.\(key)",
-                expected: "a version string"
-            ) }
-            runtimes[key] = version
-        }
-    }
-
-    private mutating func readRun(_ table: [String: TOMLValue]) throws {
-        for (key, value) in table.sorted(by: { $0.key < $1.key }) {
-            switch (key, value) {
-            case let ("command", .string(text)): command = text
-            case let ("port", .integer(number)):
+    private mutating func readSection(_ section: String, _ table: TOMLTable) throws {
+        for key in table.keys.sorted() {
+            switch (section, key) {
+            case ("runtime", _): runtimes[key] = try table.string(forKey: key)
+            case ("services", _): services[key] = try table.string(forKey: key)
+            case ("run", "command"): command = try table.string(forKey: key)
+            case ("run", "port"):
+                let number = try table.integer(forKey: key)
                 guard (1 ... 65535).contains(number) else { throw ConfigError.invalidPort(number) }
-                port = number
-            case ("command", _): throw ConfigError.wrongType(key: "run.command", expected: "a string")
-            case ("port", _): throw ConfigError.wrongType(key: "run.port", expected: "an integer")
-            default: warnings.append("unknown key 'run.\(key)' ignored")
+                port = Int(number)
+            default: warnings.append("unknown key '\(section).\(key)' ignored")
             }
-        }
-    }
-
-    private mutating func readServices(_ table: [String: TOMLValue]) throws {
-        for (key, value) in table.sorted(by: { $0.key < $1.key }) {
-            guard case let .string(version) = value else { throw ConfigError.wrongType(
-                key: "services.\(key)",
-                expected: "a version string"
-            ) }
-            services[key] = version
         }
     }
 }
 
 public enum ConfigError: Error, Equatable, LocalizedError, Sendable {
-    case wrongType(key: String, expected: String)
-    case invalidPort(Int)
+    case invalid(String)
+    case invalidPort(Int64)
     case invalidDomain(String)
 
     public var errorDescription: String? {
         switch self {
-        case let .wrongType(key, expected): "'\(key)' must be \(expected)"
+        case let .invalid(message): message
         case let .invalidPort(number): "port \(number) is out of range (1 to 65535)"
         case let .invalidDomain(name):
             "'\(name)' is not a valid domain (lowercase letters, digits and hyphens, at least two labels)"
