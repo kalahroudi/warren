@@ -10,7 +10,7 @@ Warren should be built from stable, existing parts. This list is a starting poin
 | PHP | Prebuilt static PHP binaries, mise plugins, Homebrew builds | Needs investigation: prebuilt FPM binaries are the key question | 008 |
 | Package caches | pnpm, uv, Bun and Composer shared stores, pointed at one location by environment variables | Their own caches | 007 |
 | Framework and project detection | Nixpacks and Railpack detectors, buildpacks, `package.json` and lockfile heuristics | Evaluate Railpack and Nixpacks before writing detectors | 010, 011 |
-| Reverse proxy and local HTTPS | Caddy (automatic HTTPS, internal CA, admin API for live config), mkcert plus a proxy | Caddy as a managed helper binary | 005 |
+| Reverse proxy and local HTTPS | Caddy (automatic HTTPS, internal CA, admin API for live config), mkcert plus a proxy | Caddy as a managed helper binary (decided in 005) | 005 |
 | Local DNS for custom domains | dnsmasq, macOS per-domain resolver files, `/etc/hosts` | dnsmasq with a resolver file | 006 |
 | Database and service binaries | Upstream release binaries, Homebrew bottles, Postgres.app-style builds, embedded-postgres binaries | Evaluate; prefer upstream binaries we verify by checksum | 015 to 018 |
 | Compose files from imported repos | `docker compose config` (normalizes and validates), the Compose specification | Shell out to Compose, do not parse YAML ourselves | 019 |
