@@ -12,8 +12,11 @@ let package = Package(
         .executable(name: "warrend", targets: ["WarrenDaemon"]),
         .executable(name: "warren", targets: ["WarrenCLI"]),
     ],
+    dependencies: [
+        .package(url: "https://github.com/dduan/TOMLDecoder.git", from: "0.4.5"),
+    ],
     targets: [
-        .target(name: "WarrenCore"),
+        .target(name: "WarrenCore", dependencies: [.product(name: "TOMLDecoder", package: "TOMLDecoder")]),
         .executableTarget(name: "WarrenApp", dependencies: ["WarrenCore"]),
         .executableTarget(name: "WarrenDaemon", dependencies: ["WarrenCore"]),
         .executableTarget(name: "WarrenCLI", dependencies: ["WarrenCore"]),

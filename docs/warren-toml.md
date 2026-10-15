@@ -28,7 +28,7 @@ postgres = "17"
 
 Unknown keys and tables are ignored with a warning, so newer files still load. Wrong types and syntax errors are reported with a line number, and the site still lists with default settings.
 
-Supported TOML subset: comments, `[tables]`, strings, integers, booleans, and single-line arrays of strings.
+Parsed by [TOMLDecoder](https://github.com/dduan/TOMLDecoder), so any valid TOML is accepted.
 
 ## CLI
 

@@ -73,7 +73,7 @@ struct SiteRegistryTests {
         let site = try registry.add(path: path)
         #expect(site.domains == ["shop.test"])
         #expect(site.problems.count == 1)
-        #expect(site.problems[0].contains("line 1"))
+        #expect(site.problems[0].contains("Line 1"))
     }
 
     @Test func duplicateDomainsAreRejected() throws {

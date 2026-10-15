@@ -4,7 +4,7 @@ Warren should be built from stable, existing parts. This list is a starting poin
 
 | Area | Existing options | Leaning | Spec |
 |---|---|---|---|
-| Parsing `.warren.toml` | TOMLDecoder (pure Swift, Codable), TOMLKit and swift-toml (both wrap the C++ toml++ parser) | TOMLDecoder | 004 |
+| Parsing `.warren.toml` | TOMLDecoder (pure Swift, Codable), TOMLKit and swift-toml (both wrap the C++ toml++ parser) | TOMLDecoder (decided in 004) | 004 |
 | Node, Bun, Deno and other runtimes | mise (polyglot, reads `.nvmrc`, `.tool-versions`), fnm (Node only), Volta | mise | 007 |
 | Python | uv (versions, venvs, packages) | uv | 009 |
 | PHP | Prebuilt static PHP binaries, mise plugins, Homebrew builds | Needs investigation: prebuilt FPM binaries are the key question | 008 |
