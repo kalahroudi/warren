@@ -38,4 +38,6 @@ just warren proxy status       # local HTTPS proxy; see docs/proxy.md
 just warren dns status         # local DNS for your domains; see docs/dns.md
 ```
 
+The app shows real state. `WARREN_DEMO=1` shows demo data instead (screenshots, design work), and `WARREN_HOME` points it at another state folder.
+
 `just check` is the single gate and needs a matching Xcode toolchain (accept the Xcode license first: `sudo xcodebuild -license accept`). `just dev` builds with SwiftPM and launches the app.

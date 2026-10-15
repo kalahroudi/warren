@@ -63,6 +63,22 @@ public struct DNSService: Sendable {
         )
     }
 
+    /// The same command as `prepareRun`, described as a launchd job. Writes the Corefile first.
+    public func launchAgent(port: Int, logFile: URL) throws -> (agent: LaunchAgent, plan: DNSPlan) {
+        guard installer.isInstalled(release) else { throw DNSError.notInstalled }
+        let plan = try sync(port: port)
+        guard !plan.zones.isEmpty else { throw DNSError.noZones }
+        let agent = LaunchAgent(
+            kind: .dns, program: installer.binaryURL(for: release),
+            arguments: ["-conf", paths.dnsCorefile.path], environment: [:], logFile: logFile
+        )
+        return (agent, plan)
+    }
+
+    public var isInstalled: Bool {
+        installer.isInstalled(release)
+    }
+
     public func inspectResolvers(port: Int) throws -> (plan: DNSPlan, entries: [ResolverEntry]) {
         let plan = try plan(port: port)
         return (plan, resolvers.inspect(zones: plan.zones, port: port))

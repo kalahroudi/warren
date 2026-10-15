@@ -21,6 +21,27 @@ struct SitesView: View {
     }
 
     private var list: some View {
+        if model.snapshot.sites.isEmpty {
+            return AnyView(emptyState)
+        }
+        return AnyView(listContent)
+    }
+
+    private var emptyState: some View {
+        Card {
+            VStack(alignment: .leading, spacing: 6) {
+                Text("No sites yet").font(.system(size: 14.5, weight: .semibold))
+                Text(
+                    "Register a project folder with the command below. Adding sites from the app arrives with the setup wizard."
+                )
+                .font(.system(size: 12.5))
+                .foregroundStyle(.secondary)
+                Text("warren site add ~/path/to/project").font(.system(size: 12, design: .monospaced))
+            }
+        }
+    }
+
+    private var listContent: some View {
         ScrollView {
             VStack(spacing: 8) {
                 ForEach(model.snapshot.sites) { site in
@@ -53,6 +74,16 @@ struct SitesView: View {
             .strokeBorder(selected ? Color.warrenAccent.opacity(0.4) : Color.warrenHairline))
     }
 
+    private var certificateNote: String {
+        let network = model.snapshot.network
+        guard network.proxy.running else { return "Local · the proxy is not running" }
+        switch network.rootTrusted {
+        case true?: return "Local · trusted certificate"
+        case false?: return "Local · certificate not trusted yet"
+        case nil: return "Local · no certificate yet"
+        }
+    }
+
     private func detail(_ site: Site) -> some View {
         let running = site.state == .running
         return VStack(alignment: .leading, spacing: 16) {
@@ -63,12 +94,15 @@ struct SitesView: View {
                 }
                 Spacer()
                 Button(running ? "Stop" : "Start") { model.setSite(site.id, running: !running) }
+                    .disabled(!model.snapshot.capabilities.canControlSites)
+                    .help(model.snapshot.capabilities
+                        .canControlSites ? "" : "Starting and stopping sites arrives with the process manager")
             }
             Card {
                 VStack(alignment: .leading, spacing: 4) {
                     SectionLabel(text: "Domain")
                     Text("https://\(site.domain)").font(.system(size: 13.5, weight: .medium, design: .monospaced))
-                    Text("Local · trusted certificate").font(.system(size: 12)).foregroundStyle(.secondary)
+                    Text(certificateNote).font(.system(size: 12)).foregroundStyle(.secondary)
                 }
             }
             relayCard(site)

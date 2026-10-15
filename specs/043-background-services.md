@@ -1,6 +1,6 @@
 # 043 · Background proxy and DNS, and real state in the app
 
-Status: Draft · Phase 1 · Depends on: 004, 005, 006
+Status: Implemented, pending the login check · Phase 1 · Depends on: 004, 005, 006
 
 ## Goal
 
@@ -27,6 +27,8 @@ The local HTTPS proxy and DNS server start at login and stay running without a t
 
 **CLI.** `warren proxy start|stop|restart|logs` and `warren dns start|stop|restart|logs`. `start` says exactly what it installs, then writes the plist and starts the agent. `stop` stops it and removes the plist, so nothing starts at the next login. `run` stays as the foreground command for debugging.
 
+**Saved ports.** `start` records the ports it used in `~/Warren/config/network.json`. Later commands and the app reload with those ports, not the defaults, so a proxy started on 8443 is never reloaded onto 443 by accident.
+
 **Staying in step with the registry.** Adding or removing a site (CLI or app) applies to the running proxy and DNS server automatically: the proxy reloads and the Corefile is rewritten. A failure is reported, never silent.
 
 **Real state in the app.** A `LiveProvider` implements `StateProvider` (spec 002):
@@ -34,20 +36,24 @@ The local HTTPS proxy and DNS server start at login and stay running without a t
 - Sites come from the registry, with their domains, runtime and port. A site shows Running when its port is listening, otherwise Stopped.
 - The popover and main window show whether the proxy and DNS server are running.
 - Screens whose data does not exist yet (Services, Runtimes, Agents, Storage) keep demo data and carry a visible "Preview" label on the section, so demo numbers are never mistaken for real ones.
-- The app picks up registry changes made from the CLI without a restart.
+- The app picks up registry changes made from the CLI without a restart. It re-reads the state every few seconds and only redraws when something changed.
+- Controls that would do nothing yet (starting a site, pause-all) are disabled with an explanation, and there is no fake update banner. `WARREN_DEMO=1` shows the demo data instead, for screenshots and design work.
+- The site detail reports the real certificate state (trusted, not trusted yet, none yet, or the proxy is not running).
 
 ## Acceptance criteria
 
-1. [ ] `proxy start` installs the agent and the proxy runs with no terminal open; `dns start` likewise.
-2. [ ] Killing the Caddy or CoreDNS process makes launchd restart it.
-3. [ ] The plists set `RunAtLoad`, so both start at login (checked in the plist and with `launchctl print`; the log-out and log-in test is the user's).
-4. [ ] `stop` stops the agent and removes the plist, leaving no files and no loaded job.
-5. [ ] Output is written to `~/Warren/logs`, and `logs` shows it.
-6. [ ] `site add` and `site remove` update the running proxy and DNS server without a manual reload.
-7. [ ] The app lists the real registered sites and updates when the registry changes, with no restart.
-8. [ ] The app shows the real running state of the proxy and DNS server, and a site's state follows its port.
-9. [ ] Preview sections are visibly labelled and the demo data is not shown as real.
-10. [ ] Nothing is installed without an explicit `start`.
+1. [x] `proxy start` installs the agent and the proxy runs with no terminal open; `dns start` likewise.
+2. [x] Killing the Caddy or CoreDNS process makes launchd restart it.
+3. [x] The plists set `RunAtLoad`, so both start at login (checked in the plist and with `launchctl print`; the log-out and log-in test is the user's).
+4. [x] `stop` stops the agent and removes the plist, leaving no files and no loaded job.
+5. [x] Output is written to `~/Warren/logs`, and `logs` shows it.
+6. [x] `site add` and `site remove` update the running proxy and DNS server without a manual reload.
+7. [x] The app lists the real registered sites and updates when the registry changes, with no restart.
+8. [x] The app shows the real running state of the proxy and DNS server, and a site's state follows its port.
+9. [x] Preview sections are visibly labelled and the demo data is not shown as real.
+10. [x] Nothing is installed without an explicit `start`.
+
+*Verified with real launchd and the real Caddy and CoreDNS: both started with no terminal, were killed with `kill -9` and came back within a second with new process ids, applied `site add` and `site remove` by themselves (a new site served over HTTPS, a new `.dev` zone answered, a removed site stopped), wrote their logs, and `stop` left no job, plist, process or listener. The running app was read through the accessibility tree: real sites, "proxy running", Preview labels on the four demo sections, a disabled Start button, no fake banner, and live updates as the registry changed. The plist sets `RunAtLoad`; **the log-out and log-in check is for you.***
 
 ## Test plan
 
@@ -59,6 +65,6 @@ Plists under `~/Library/LaunchAgents` and logs under `~/Warren/logs`. `stop` rem
 
 ## Open questions
 
-- Does `SMAppService` work for an ad-hoc signed development build, or only a properly signed one?
+- Does `SMAppService` work for an ad-hoc signed development build, or only a properly signed one? Not answered; plain `launchctl` works unsigned and is what ships here.
 - The bundle identifier and launchd label prefix (`dev.warren`) are placeholders until Warren owns a domain.
 - What should the proxy do at login if port 80 or 443 is already taken?

@@ -13,8 +13,10 @@ struct PopoverView: View {
             sites
             Divider().padding(.horizontal, 16)
             services
-            Divider().padding(.horizontal, 16)
-            runtimes
+            if !model.snapshot.activeRuntimes.isEmpty {
+                Divider().padding(.horizontal, 16)
+                runtimes
+            }
             if let update = model.snapshot.update {
                 updateBanner(update)
             }
@@ -30,6 +32,7 @@ struct PopoverView: View {
     private var layoutKey: String {
         let snapshot = model.snapshot
         return "\(snapshot.sites.count)-\(snapshot.services.count)-\(snapshot.update != nil)-\(snapshot.paused)"
+            + "-\(snapshot.activeRuntimes.isEmpty)-\(snapshot.isLive)"
     }
 
     private var header: some View {
@@ -46,6 +49,7 @@ struct PopoverView: View {
             Button { model.togglePaused() } label: {
                 Image(systemName: model.snapshot.paused ? "play.fill" : "pause.fill").frame(width: 16, height: 16)
             }
+            .disabled(!model.snapshot.capabilities.canPause)
             .help(model.snapshot.paused ? "Resume everything" : "Pause everything")
             Menu {
                 Button("Open Warren") { MainWindow.open(openWindow) }
@@ -70,6 +74,10 @@ struct PopoverView: View {
         if snapshot.paused {
             return "Paused"
         }
+        if snapshot.isLive {
+            let count = snapshot.sites.count
+            return "\(count) \(count == 1 ? "site" : "sites") · proxy \(snapshot.network.proxy.running ? "running" : "stopped")"
+        }
         return "\(snapshot.runningSiteCount) sites · \(snapshot.runningServiceCount) services running"
     }
 
@@ -82,6 +90,12 @@ struct PopoverView: View {
             }
             .padding(.horizontal, 8)
             .padding(.vertical, 6)
+            if model.snapshot.sites.isEmpty {
+                Text("No sites yet. Add one with: warren site add <folder>")
+                    .font(.system(size: 12))
+                    .foregroundStyle(.secondary)
+                    .padding(8)
+            }
             ForEach(model.snapshot.sites.prefix(4)) { site in
                 HStack(spacing: 10) {
                     StatusDot(running: site.state == .running)
@@ -108,7 +122,12 @@ struct PopoverView: View {
 
     private var services: some View {
         VStack(alignment: .leading, spacing: 8) {
-            SectionLabel(text: "Services")
+            HStack(spacing: 8) {
+                SectionLabel(text: "Services")
+                if model.snapshot.previewSections.contains("Services") {
+                    Chip(text: "Preview", tint: .orange)
+                }
+            }
             LazyVGrid(columns: [GridItem(.flexible(), spacing: 8), GridItem(.flexible())], spacing: 8) {
                 ForEach(model.snapshot.services.prefix(4)) { service in
                     HStack {
@@ -159,10 +178,21 @@ struct PopoverView: View {
         .padding(.bottom, 10)
     }
 
+    private func networkStatus(_ status: ServiceStatus, name: String) -> some View {
+        HStack(spacing: 5) {
+            StatusDot(running: status.running)
+            Text(status.installed ? name : "\(name) not set up")
+                .font(.system(size: 12))
+                .foregroundStyle(.secondary)
+        }
+        .help(status
+            .running ? "\(name) is running" : (status.installed ? "\(name) is stopped" : "\(name) is not set up yet"))
+    }
+
     private var footer: some View {
         HStack {
-            StatusDot(running: true)
-            Text("Claude Code connected via MCP").font(.system(size: 12)).foregroundStyle(.secondary)
+            networkStatus(model.snapshot.network.proxy, name: "HTTPS proxy")
+            networkStatus(model.snapshot.network.dns, name: "DNS")
             Spacer()
             Button("Open Warren ⌘O") { MainWindow.open(openWindow) }
                 .buttonStyle(.plain)

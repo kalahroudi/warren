@@ -11,7 +11,11 @@ struct StorageView: View {
     var body: some View {
         let storage = model.snapshot.storage
         return VStack(alignment: .leading, spacing: 18) {
-            PageHeader(title: "Storage", subtitle: "Everything Warren keeps on disk, and what is safe to get back.")
+            PageHeader(
+                title: "Storage",
+                subtitle: "Everything Warren keeps on disk, and what is safe to get back.",
+                preview: model.snapshot.previewSections.contains("Storage")
+            )
             HStack(alignment: .top, spacing: 14) {
                 usage(storage)
                 Card {

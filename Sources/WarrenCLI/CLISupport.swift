@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 import Foundation
+import WarrenCore
 
 struct CLIError: Error, LocalizedError {
     let message: String
@@ -40,4 +41,32 @@ func runScript(_ script: String, privileged: Bool) throws {
         ? try runForeground(URL(fileURLWithPath: "/usr/bin/sudo"), ["/bin/sh", file.path])
         : try runForeground(URL(fileURLWithPath: "/bin/sh"), [file.path])
     guard status == 0 else { throw CLIError("the script failed (exit \(status)); nothing more was changed") }
+}
+
+func announceBackground(_ kind: BackgroundKind, _ background: BackgroundServices) {
+    print("""
+    started \(kind.label) in the background. It starts at every login and restarts if it stops.
+    launch agent: \(background.plistURL(kind).path)
+    log:          \(background.logURL(kind).path)
+    Undo it with: warren \(kind.rawValue) stop
+    """)
+}
+
+func stopBackground(_ kind: BackgroundKind, paths: WarrenPaths) throws {
+    try NetworkServices(paths: paths).stop(kind)
+    print("stopped \(kind.label) and removed it from login")
+}
+
+func showLogs(_ kind: BackgroundKind, paths: WarrenPaths, _ options: [String]) throws {
+    let log = BackgroundServices(paths: paths).logURL(kind)
+    guard FileManager.default.fileExists(atPath: log.path) else { throw CLIError("no log yet at \(log.path)") }
+    let arguments = options.contains("-f") ? ["-n", "50", "-f", log.path] : ["-n", "100", log.path]
+    _ = try runForeground(URL(fileURLWithPath: "/usr/bin/tail"), arguments)
+}
+
+/// After the site list changes, brings a running proxy and DNS server up to date and reports any problem.
+func syncRunningNetwork(paths: WarrenPaths) {
+    for problem in NetworkServices(paths: paths).applyRegistryChange() {
+        FileHandle.standardError.write(Data("warren: could not update \(problem)\n".utf8))
+    }
 }

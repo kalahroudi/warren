@@ -8,6 +8,10 @@ let dnsUsage = """
 usage: warren dns <command>
 
   install                  download and verify CoreDNS
+  start [--port N]         run the DNS server in the background, now and at every login
+  stop                     stop it and remove it from login
+  restart [--port N]       stop and start it again
+  logs [-f]                show the DNS server's log (-f follows it)
   config [--port N]        print the generated Corefile
   run [--port N]           run the DNS server in the foreground (Ctrl-C stops it)
   sync [--port N]          rewrite the Corefile from the site registry (a running server reloads it)
@@ -15,11 +19,11 @@ usage: warren dns <command>
   disable [--yes]          remove the resolver files Warren wrote
   status [--port N]        show what is installed, running, and whether macOS resolves your domains
 
-Default port: 5354. WARREN_RESOLVER_DIR overrides /etc/resolver (for testing).
+Default port: the one last used with start, else 5354. WARREN_RESOLVER_DIR overrides /etc/resolver (for testing).
 """
 
-private func parsePort(_ arguments: [String]) throws -> Int {
-    var port = DNSPlanner.defaultPort
+private func parsePort(_ arguments: [String], _ service: DNSService) throws -> Int {
+    var port = NetworkSettings.load(service.paths).dnsPort
     var index = 0
     while index < arguments.count {
         let flag = arguments[index]
@@ -56,6 +60,9 @@ func runDNS(_ arguments: [String], paths: WarrenPaths) async throws {
     let rest = Array(arguments.dropFirst())
     switch arguments.first {
     case "install": try await install(service)
+    case "start", "restart": try start(service, rest)
+    case "stop": try stopBackground(.dns, paths: paths)
+    case "logs": try showLogs(.dns, paths: paths, rest)
     case "config": try config(service, rest)
     case "run": try run(service, rest)
     case "sync": try sync(service, rest)
@@ -72,13 +79,13 @@ private func install(_ service: DNSService) async throws {
 }
 
 private func config(_ service: DNSService, _ options: [String]) throws {
-    let plan = try service.plan(port: parsePort(options))
+    let plan = try service.plan(port: parsePort(options, service))
     print(plan.corefile, terminator: "")
     printNotes(plan)
 }
 
 private func run(_ service: DNSService, _ options: [String]) throws {
-    let launch = try service.prepareRun(port: parsePort(options))
+    let launch = try service.prepareRun(port: parsePort(options, service))
     print("answering for: \(launch.plan.zones.joined(separator: ", "))")
     printNotes(launch.plan)
     // Replace this process with CoreDNS, so Ctrl-C reaches it directly and nothing is left behind.
@@ -88,13 +95,13 @@ private func run(_ service: DNSService, _ options: [String]) throws {
 }
 
 private func sync(_ service: DNSService, _ options: [String]) throws {
-    let plan = try service.sync(port: parsePort(options))
+    let plan = try service.sync(port: parsePort(options, service))
     print("wrote the Corefile: \(plan.zones.count) zone(s) (\(plan.zones.joined(separator: ", ")))")
     printNotes(plan)
 }
 
 private func enable(_ service: DNSService, _ options: [String]) throws {
-    let port = try parsePort(options)
+    let port = try parsePort(options, service)
     let (plan, entries) = try service.inspectResolvers(port: port)
     printNotes(plan)
     guard !plan.zones.isEmpty else { throw DNSError.noZones }
@@ -131,7 +138,7 @@ private func disable(_ service: DNSService, _ options: [String]) throws {
 }
 
 private func status(_ service: DNSService, _ options: [String]) throws {
-    let status = try service.status(port: parsePort(options))
+    let status = try service.status(port: parsePort(options, service))
     print("coredns: \(status.installedVersion.map { "installed (\($0))" } ?? "not installed")")
     print("running: \(status.running ? "yes" : "no")")
     for entry in status.resolvers {
@@ -141,4 +148,12 @@ private func status(_ service: DNSService, _ options: [String]) throws {
         print("  \(item.domain) -> \(item.resolves ? "resolves to this Mac" : "does not resolve")")
     }
     printNotes(status.plan)
+}
+
+private func start(_ service: DNSService, _ options: [String]) throws {
+    let services = NetworkServices(paths: service.paths)
+    let plan = try services.startDNS(port: parsePort(options, service))
+    announceBackground(.dns, services.background)
+    print("answering for: \(plan.zones.joined(separator: ", "))")
+    printNotes(plan)
 }

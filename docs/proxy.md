@@ -5,13 +5,18 @@ Warren serves your sites at `https://<domain>` through a managed copy of [Caddy]
 ```sh
 just warren proxy install     # download Caddy 2.11.7, verify its SHA-512
 just warren proxy status      # what is installed, running, and routed
-just warren proxy run         # run in the foreground; Ctrl-C stops it
+just warren proxy start       # run in the background, now and at every login
+just warren proxy stop        # stop it and remove it from login
+just warren proxy logs        # the proxy's log (-f follows it)
+just warren proxy run         # run in the foreground for debugging; Ctrl-C stops it
 just warren proxy reload      # apply added or removed sites without a restart
 just warren proxy trust       # trust Warren's root certificate (asks first, needs your password)
 just warren proxy untrust     # undo that
 ```
 
-Use `--http-port` and `--https-port` to run on other ports, for example `8080` and `8443` while testing.
+Use `--http-port` and `--https-port` to run on other ports, for example `8080` and `8443` while testing. `start` remembers them, so `reload`, `status` and the app use the same ports. Adding or removing a site updates a running proxy by itself.
+
+`start` installs a launch agent (`~/Library/LaunchAgents/dev.warren.proxy.plist`) so launchd keeps the proxy running, restarts it if it stops, and starts it at login. `stop` removes it.
 
 ## What it touches
 

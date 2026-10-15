@@ -33,11 +33,15 @@ final class AppModel: ObservableObject {
     @Published var selectedSiteID: String?
 
     private let provider: any StateProvider
+    private var timer: Timer?
 
     init(provider: any StateProvider) {
         self.provider = provider
         snapshot = provider.snapshot()
         selectedSiteID = snapshot.sites.first?.id
+        timer = Timer.scheduledTimer(withTimeInterval: 3, repeats: true) { [weak self] _ in
+            Task { @MainActor in self?.refresh() }
+        }
     }
 
     var selectedSite: Site? {
@@ -64,7 +68,14 @@ final class AppModel: ObservableObject {
         refresh()
     }
 
-    private func refresh() {
-        snapshot = provider.snapshot()
+    /// Re-reads the state. The UI only updates when something actually changed.
+    func refresh() {
+        let latest = provider.snapshot()
+        if latest != snapshot {
+            snapshot = latest
+        }
+        if !latest.sites.contains(where: { $0.id == selectedSiteID }) {
+            selectedSiteID = latest.sites.first?.id
+        }
     }
 }

@@ -108,7 +108,26 @@ public struct UpdateInfo: Hashable, Sendable {
     public let deltaMB: Int
 }
 
-public struct StateSnapshot: Sendable {
+public struct ServiceStatus: Equatable, Sendable {
+    public var installed: Bool
+    public var running: Bool
+}
+
+/// Whether Warren's local HTTPS proxy and DNS server are installed and running.
+public struct NetworkStatus: Equatable, Sendable {
+    public var proxy: ServiceStatus
+    public var dns: ServiceStatus
+    /// Whether the system trusts Warren's local certificate. Nil until the certificate exists.
+    public var rootTrusted: Bool?
+}
+
+/// What the current state source can actually do, so the UI never offers a button that does nothing.
+public struct Capabilities: Equatable, Sendable {
+    public var canControlSites: Bool
+    public var canPause: Bool
+}
+
+public struct StateSnapshot: Equatable, Sendable {
     public var sites: [Site]
     public var services: [Service]
     public var runtimeGroups: [RuntimeGroup]
@@ -117,6 +136,12 @@ public struct StateSnapshot: Sendable {
     public var storage: StorageInfo
     public var update: UpdateInfo?
     public var paused: Bool
+    public var network: NetworkStatus
+    public var capabilities: Capabilities
+    /// True when sites and network status are real. False for demo data.
+    public var isLive: Bool
+    /// Sections that still show demo data, even in live mode. Section names match the sidebar titles.
+    public var previewSections: Set<String>
 
     public var runningSiteCount: Int {
         sites.filter { $0.state == .running }.count
