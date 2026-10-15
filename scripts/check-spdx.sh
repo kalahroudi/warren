@@ -5,7 +5,7 @@ set -euo pipefail
 cd "$(git rev-parse --show-toplevel)"
 
 missing=0
-# Tracked and untracked-but-not-ignored files, so it works before the first commit too.
+# Includes untracked files so it also works before the first commit.
 while IFS= read -r file; do
   case "$file" in
     services/relay/*) continue ;; # AGPL-3.0 tree checks its own header

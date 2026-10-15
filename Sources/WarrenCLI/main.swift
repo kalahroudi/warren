@@ -2,5 +2,5 @@
 
 import WarrenCore
 
-// Placeholder. Real commands arrive with the specs that need them.
+// Placeholder until commands are specified.
 print("warren \(Warren.version)")

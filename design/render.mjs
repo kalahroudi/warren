@@ -2,8 +2,8 @@
 //
 // Renders the design mockups (design/mockup/*.dc.html) to PNG screenshots using headless Chrome.
 //   node design/render.mjs
-// Output: docs/assets/screenshots/*.png and docs/assets/icon.png
-// The screenshots show demo data from the mockups. They are design renderings, not the shipping app.
+// Writes docs/assets/screenshots/*.png and docs/assets/icon.png.
+// The screenshots show demo data and are design renderings, not the shipping app.
 
 import { execFileSync } from "node:child_process";
 import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
@@ -26,7 +26,7 @@ const boards = {
 
 const canvas = JSON.parse(readFileSync(join(root, "design/mockup/canvas.json"), "utf8"));
 
-// --- minimal expander for the mockup template syntax: {{holes}}, <sc-for>, <sc-if> ---
+// Minimal expander for the mockup template syntax: {{holes}}, <sc-for>, <sc-if>.
 
 function lookup(path, scope) {
   const p = path.trim();
@@ -94,7 +94,7 @@ function expand(html, scope) {
 function renderBoard(file) {
   const src = readFileSync(join(root, "design/mockup", file), "utf8");
   const body = src.match(/<x-dc>([\s\S]*?)<\/x-dc>/)[1];
-  const css = (body.match(/<helmet>([\s\S]*?)<\/helmet>/) ?? [, ""])[1];
+  const css = body.match(/<helmet>([\s\S]*?)<\/helmet>/)?.[1] ?? "";
   const markup = body.replace(/<helmet>[\s\S]*?<\/helmet>/, "");
   const code = src.match(/<script type="text\/x-dc"[^>]*>([\s\S]*?)<\/script>/)[1];
   const Component = new Function("DCLogic", `${code}\nreturn Component;`)(
