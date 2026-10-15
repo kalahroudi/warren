@@ -11,6 +11,7 @@ done
 echo "== format";  swiftformat Sources Tests Package.swift --lint
 echo "== lint";    swiftlint lint --strict
 echo "== spdx";    scripts/check-spdx.sh
+echo "== state";   scripts/check-fixtures.sh
 echo "== build";   swift build
 echo "== test";    swift test
 echo "All checks passed."
