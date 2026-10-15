@@ -3,56 +3,58 @@
 import SwiftUI
 import WarrenCore
 
+/// The menu bar popover: what people look at many times a day. Setup lives in the setup wizard, not here.
 struct PopoverView: View {
     @ObservedObject var model: AppModel
-    @Environment(\.openWindow) private var openWindow
+    let openMain: () -> Void
+    let openSetup: () -> Void
+    let close: () -> Void
+
+    private var snapshot: StateSnapshot {
+        model.snapshot
+    }
 
     var body: some View {
         VStack(spacing: 0) {
             header
             sites
-            Divider().padding(.horizontal, 16)
-            services
-            if !model.snapshot.activeRuntimes.isEmpty {
+            if !snapshot.isLive {
                 Divider().padding(.horizontal, 16)
-                runtimes
+                services
+                if !snapshot.activeRuntimes.isEmpty {
+                    Divider().padding(.horizontal, 16)
+                    runtimes
+                }
             }
-            if let update = model.snapshot.update {
+            if let update = snapshot.update {
                 updateBanner(update)
             }
             footer
         }
         .frame(width: 392)
         .fixedSize(horizontal: false, vertical: true)
-        .background(PanelFitter(layoutKey: layoutKey))
-        .onExitCommand { NSApp.keyWindow?.close() }
+        .onExitCommand { close() }
     }
 
-    /// Changes whenever something that affects the popover's height changes.
-    private var layoutKey: String {
-        let snapshot = model.snapshot
-        return "\(snapshot.sites.count)-\(snapshot.services.count)-\(snapshot.update != nil)-\(snapshot.paused)"
-            + "-\(snapshot.activeRuntimes.isEmpty)-\(snapshot.isLive)"
-    }
+    // MARK: - Header
 
     private var header: some View {
         HStack(spacing: 10) {
             AppMark()
             VStack(alignment: .leading, spacing: 1) {
                 Text("Warren").font(.system(size: 14, weight: .semibold))
-                HStack(spacing: 6) {
-                    StatusDot(running: !model.snapshot.paused)
-                    Text(statusLine).font(.system(size: 12)).foregroundStyle(.secondary)
-                }
+                Text(statusLine).font(.system(size: 12)).foregroundStyle(.secondary)
             }
             Spacer()
-            Button { model.togglePaused() } label: {
-                Image(systemName: model.snapshot.paused ? "play.fill" : "pause.fill").frame(width: 16, height: 16)
+            if snapshot.capabilities.canPause {
+                Button { model.togglePaused() } label: {
+                    Image(systemName: snapshot.paused ? "play.fill" : "pause.fill").frame(width: 16, height: 16)
+                }
+                .help(snapshot.paused ? "Resume local HTTPS and DNS" : "Pause local HTTPS and DNS")
             }
-            .disabled(!model.snapshot.capabilities.canPause)
-            .help(model.snapshot.paused ? "Resume everything" : "Pause everything")
             Menu {
-                Button("Open Warren") { MainWindow.open(openWindow) }
+                Button("Open Warren") { openMain() }
+                Button("Set up Warren…") { openSetup() }
                 Divider()
                 Button("Quit Warren") { NSApplication.shared.terminate(nil) }
                     .keyboardShortcut("q")
@@ -70,66 +72,87 @@ struct PopoverView: View {
     }
 
     private var statusLine: String {
-        let snapshot = model.snapshot
         if snapshot.paused {
             return "Paused"
         }
         if snapshot.isLive {
-            let count = snapshot.sites.count
-            return "\(count) \(count == 1 ? "site" : "sites") · proxy \(snapshot.network.proxy.running ? "running" : "stopped")"
+            let running = snapshot.runningSiteCount
+            return snapshot.sites.isEmpty ? "No sites yet" : "\(running) of \(snapshot.sites.count) running"
         }
         return "\(snapshot.runningSiteCount) sites · \(snapshot.runningServiceCount) services running"
     }
 
+    // MARK: - Sites
+
     private var sites: some View {
         VStack(alignment: .leading, spacing: 2) {
-            HStack {
-                SectionLabel(text: "Sites")
-                Spacer()
-                Text("+ New site").font(.system(size: 12, weight: .medium)).foregroundStyle(Color.warrenAccent)
-            }
-            .padding(.horizontal, 8)
-            .padding(.vertical, 6)
-            if model.snapshot.sites.isEmpty {
-                Text("No sites yet. Add one with: warren site add <folder>")
+            SectionLabel(text: "Sites")
+                .padding(.horizontal, 8)
+                .padding(.vertical, 6)
+            if snapshot.sites.isEmpty {
+                Text("Your sites will show up here.")
                     .font(.system(size: 12))
                     .foregroundStyle(.secondary)
                     .padding(8)
             }
-            ForEach(model.snapshot.sites.prefix(4)) { site in
-                HStack(spacing: 10) {
-                    StatusDot(running: site.state == .running)
-                    VStack(alignment: .leading, spacing: 1) {
-                        HStack(spacing: 7) {
-                            Text(site.domain).font(.system(size: 13, weight: .medium))
-                            Chip(text: site.stack)
-                        }
-                        Text("\(site.detail) · \(site.runtime)")
-                            .font(.system(size: 11.5, design: .monospaced))
-                            .foregroundStyle(.secondary)
-                    }
-                    Spacer()
-                    if site.relayURL != nil {
-                        Chip(text: "Relay on", tint: .blue)
-                    }
-                }
-                .padding(8)
+            ForEach(snapshot.sites.prefix(6)) { site in
+                Button { open(site) } label: { row(site) }
+                    .buttonStyle(.plain)
+                    .help(snapshot.isLive ? "Open \(site.domain)" : "")
             }
         }
         .padding(.horizontal, 8)
         .padding(.bottom, 6)
     }
 
+    private func row(_ site: Site) -> some View {
+        HStack(spacing: 10) {
+            StatusDot(running: site.state == .running)
+            VStack(alignment: .leading, spacing: 1) {
+                HStack(spacing: 7) {
+                    Text(site.domain).font(.system(size: 13, weight: .medium))
+                    if site.stack != "Unknown" {
+                        Chip(text: site.stack)
+                    }
+                }
+                Text(detail(site))
+                    .font(.system(size: 11.5, design: .monospaced))
+                    .foregroundStyle(.secondary)
+            }
+            Spacer()
+            if site.relayURL != nil {
+                Chip(text: "Relay on", tint: .blue)
+            }
+        }
+        .padding(8)
+        .contentShape(Rectangle())
+    }
+
+    private func detail(_ site: Site) -> String {
+        site.runtime == "No runtime" ? site.detail : "\(site.detail) · \(site.runtime)"
+    }
+
+    /// Opens the site in the browser. Until setup is finished its address would not work, so the wizard opens instead.
+    private func open(_ site: Site) {
+        guard snapshot.isLive, !snapshot.paused else { return }
+        guard snapshot.setupComplete else {
+            openSetup()
+            return
+        }
+        let port = NetworkSettings.load(.fromEnvironment()).httpsPort
+        let suffix = port == 443 ? "" : ":\(port)"
+        if let url = URL(string: "https://\(site.domain)\(suffix)") {
+            NSWorkspace.shared.open(url)
+        }
+    }
+
+    // MARK: - Demo-only sections
+
     private var services: some View {
         VStack(alignment: .leading, spacing: 8) {
-            HStack(spacing: 8) {
-                SectionLabel(text: "Services")
-                if model.snapshot.previewSections.contains("Services") {
-                    Chip(text: "Preview", tint: .orange)
-                }
-            }
+            SectionLabel(text: "Services")
             LazyVGrid(columns: [GridItem(.flexible(), spacing: 8), GridItem(.flexible())], spacing: 8) {
-                ForEach(model.snapshot.services.prefix(4)) { service in
+                ForEach(snapshot.services.prefix(4)) { service in
                     HStack {
                         VStack(alignment: .leading, spacing: 1) {
                             Text(service.name).font(.system(size: 12.5, weight: .medium))
@@ -152,12 +175,14 @@ struct PopoverView: View {
     private var runtimes: some View {
         HStack(spacing: 6) {
             SectionLabel(text: "Active")
-            ForEach(model.snapshot.activeRuntimes, id: \.self) { Chip(text: $0) }
+            ForEach(snapshot.activeRuntimes, id: \.self) { Chip(text: $0) }
             Spacer(minLength: 0)
         }
         .padding(.horizontal, 16)
         .padding(.vertical, 10)
     }
+
+    // MARK: - Footer
 
     private func updateBanner(_ update: UpdateInfo) -> some View {
         HStack {
@@ -178,23 +203,29 @@ struct PopoverView: View {
         .padding(.bottom, 10)
     }
 
-    private func networkStatus(_ status: ServiceStatus, name: String) -> some View {
-        HStack(spacing: 5) {
-            StatusDot(running: status.running)
-            Text(status.installed ? name : "\(name) not set up")
-                .font(.system(size: 12))
-                .foregroundStyle(.secondary)
+    /// Something that was working and stopped. Setup that was never done is not mentioned here.
+    private var footerProblem: String? {
+        if let notice = snapshot.notice {
+            return notice
         }
-        .help(status
-            .running ? "\(name) is running" : (status.installed ? "\(name) is stopped" : "\(name) is not set up yet"))
+        guard snapshot.isLive, snapshot.setupComplete, !snapshot.paused else { return nil }
+        if !snapshot.network.proxy.running {
+            return "Local HTTPS stopped"
+        }
+        if !snapshot.network.dns.running {
+            return "Local DNS stopped"
+        }
+        return nil
     }
 
     private var footer: some View {
         HStack {
-            networkStatus(model.snapshot.network.proxy, name: "HTTPS proxy")
-            networkStatus(model.snapshot.network.dns, name: "DNS")
+            if let problem = footerProblem {
+                StatusDot(running: false)
+                Text(problem).font(.system(size: 12)).foregroundStyle(.secondary)
+            }
             Spacer()
-            Button("Open Warren ⌘O") { MainWindow.open(openWindow) }
+            Button("Open Warren ⌘O") { openMain() }
                 .buttonStyle(.plain)
                 .keyboardShortcut("o")
                 .font(.system(size: 12, weight: .medium))
@@ -202,28 +233,5 @@ struct PopoverView: View {
         .padding(.horizontal, 16)
         .padding(.vertical, 12)
         .overlay(alignment: .top) { Divider() }
-    }
-}
-
-/// The menu bar panel keeps its opening height when the content shrinks or grows, which leaves empty bands
-/// above and below. This resizes the panel to fit its content and keeps the top edge under the menu bar.
-private struct PanelFitter: NSViewRepresentable {
-    /// Gives SwiftUI a reason to call `updateNSView` when the content's height may have changed.
-    let layoutKey: String
-
-    func makeNSView(context _: Context) -> NSView {
-        NSView()
-    }
-
-    func updateNSView(_ view: NSView, context _: Context) {
-        DispatchQueue.main.async {
-            guard let window = view.window, let content = window.contentView else { return }
-            let target = window.frameRect(forContentRect: NSRect(origin: .zero, size: content.fittingSize)).size
-            guard abs(window.frame.height - target.height) > 0.5 else { return }
-            var frame = window.frame
-            frame.origin.y += frame.height - target.height
-            frame.size.height = target.height
-            window.setFrame(frame, display: true)
-        }
     }
 }

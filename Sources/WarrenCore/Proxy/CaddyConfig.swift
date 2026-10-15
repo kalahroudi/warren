@@ -82,6 +82,13 @@ public extension WarrenPaths {
 public enum CaddyConfig {
     private static let loopback = ["127.0.0.1/32", "::1/128"]
 
+    /// Warren's own check page. The setup wizard loads it to prove DNS, the certificate and the proxy all work.
+    public static let selfCheckDomain = "warren.test"
+    public static let selfCheckBody = "Warren is working"
+
+    /// Names users cannot claim for a site.
+    public static let reservedDomains: Set = [selfCheckDomain]
+
     /// Builds the routes and Caddy JSON for the given sites. Output is sorted, so the same input gives the same config.
     public static func plan(sites: [ResolvedSite], ports: ProxyPorts, paths: WarrenPaths) throws -> ProxyPlan {
         for port in [ports.http, ports.https] where !(1 ... 65535).contains(port) {
@@ -107,7 +114,12 @@ public enum CaddyConfig {
                                socket: URL) throws -> String
     {
         let localOnly: [String: Any] = ["remote_ip": ["ranges": loopback]]
-        var httpRoutes: [[String: Any]] = routes.map { route in
+        let selfCheck: [String: Any] = [
+            "match": [["host": [selfCheckDomain], "remote_ip": ["ranges": loopback]]],
+            "handle": [["handler": "static_response", "status_code": 200, "body": selfCheckBody]],
+            "terminal": true,
+        ]
+        var httpRoutes: [[String: Any]] = [selfCheck] + routes.map { route in
             [
                 "match": [["host": route.domains, "remote_ip": ["ranges": loopback]]],
                 "handle": [["handler": "reverse_proxy", "upstreams": [["dial": "localhost:\(route.port)"]]]],
@@ -124,7 +136,7 @@ public enum CaddyConfig {
             "terminal": true,
         ])
 
-        let domains = routes.flatMap(\.domains)
+        let domains = [selfCheckDomain] + routes.flatMap(\.domains)
         var apps: [String: Any] = [
             "http": [
                 "http_port": ports.http,
@@ -134,9 +146,7 @@ public enum CaddyConfig {
             // Warren never lets Caddy touch the system keychain. Trust is an explicit user action.
             "pki": ["certificate_authorities": ["local": ["install_trust": false]]],
         ]
-        if !domains.isEmpty {
-            apps["tls"] = ["automation": ["policies": [["subjects": domains, "issuers": [["module": "internal"]]]]]]
-        }
+        apps["tls"] = ["automation": ["policies": [["subjects": domains, "issuers": [["module": "internal"]]]]]]
         let config: [String: Any] = [
             "admin": ["listen": "unix/\(socket.path)|0600"],
             "storage": ["module": "file_system", "root": paths.caddyDataDirectory.path],

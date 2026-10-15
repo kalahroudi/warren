@@ -32,7 +32,8 @@ public struct DNSService: Sendable {
     }
 
     public func plan(port: Int) throws -> DNSPlan {
-        let domains = try SiteRegistry(paths: paths).list().flatMap(\.domains)
+        // warren.test is always served (the setup check page), so the .test zone always exists.
+        let domains = try SiteRegistry(paths: paths).list().flatMap(\.domains) + [CaddyConfig.selfCheckDomain]
         return try DNSPlanner.plan(domains: domains, port: port)
     }
 
@@ -86,7 +87,7 @@ public struct DNSService: Sendable {
 
     public func status(port: Int) throws -> DNSStatus {
         let (plan, entries) = try inspectResolvers(port: port)
-        let domains = try SiteRegistry(paths: paths).list().flatMap(\.domains)
+        let domains = try SiteRegistry(paths: paths).list().flatMap(\.domains) + [CaddyConfig.selfCheckDomain]
         return DNSStatus(
             installedVersion: installer.isInstalled(release) ? release.version : nil,
             running: PortCheck.holder(of: port)?.hasPrefix(release.name) == true,

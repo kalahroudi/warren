@@ -41,9 +41,7 @@ private func parsePort(_ arguments: [String], _ service: DNSService) throws -> I
 }
 
 private func makeService(_ paths: WarrenPaths) -> DNSService {
-    let directory = ProcessInfo.processInfo.environment["WARREN_RESOLVER_DIR"]
-        .map { ResolverManager(directory: URL(fileURLWithPath: $0, isDirectory: true)) }
-    return DNSService(paths: paths, resolvers: directory ?? ResolverManager())
+    DNSService(paths: paths)
 }
 
 private func printNotes(_ plan: DNSPlan) {

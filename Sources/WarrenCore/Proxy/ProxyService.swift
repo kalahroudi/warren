@@ -88,20 +88,6 @@ public struct ProxyService: Sendable {
         return plan
     }
 
-    public func trustCommand() throws -> (binary: URL, arguments: [String]) {
-        let binary = try installedBinary()
-        guard isRunning() else { throw ProxyError.notRunning }
-        return try (binary, ["trust", "--address", "unix/\(paths.validatedAdminSocket().path)"])
-    }
-
-    public func untrustCommand() throws -> (binary: URL, arguments: [String]) {
-        let binary = try installedBinary()
-        guard FileManager.default.fileExists(atPath: paths.caddyRootCertificate.path) else {
-            throw ProxyError.rootCertificateMissing
-        }
-        return (binary, ["untrust", "--cert", paths.caddyRootCertificate.path])
-    }
-
     public func status(ports: ProxyPorts) throws -> ProxyStatus {
         let plan = try plan(ports: ports)
         return ProxyStatus(

@@ -29,6 +29,7 @@ public struct NetworkServices: Sendable {
         }
         let agent = try proxy.launchAgent(ports: ports, logFile: background.logURL(.proxy))
         try background.start(agent)
+        clearPause()
         var settings = NetworkSettings.load(paths)
         settings.httpPort = ports.http
         settings.httpsPort = ports.https
@@ -43,10 +44,19 @@ public struct NetworkServices: Sendable {
         }
         let (agent, plan) = try dns.launchAgent(port: port, logFile: background.logURL(.dns))
         try background.start(agent)
+        clearPause()
         var settings = NetworkSettings.load(paths)
         settings.dnsPort = port
         try settings.save(paths)
         return plan
+    }
+
+    /// Starting something on purpose ends a pause.
+    private func clearPause() {
+        var user = UserState.load(paths)
+        guard user.paused else { return }
+        user.paused = false
+        try? user.save(paths)
     }
 
     public func stop(_ kind: BackgroundKind) throws {
