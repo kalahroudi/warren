@@ -11,6 +11,7 @@ usage: warren <command>
   site show <id> [--json]      show one site's resolved settings
   site remove <id>             unregister a site (never deletes files)
   proxy <command>              local HTTPS proxy (see: warren proxy)
+  dns <command>                local DNS for your domains (see: warren dns)
   --version                    print the version
 
 Warren keeps its state in ~/Warren (override with WARREN_HOME).
@@ -82,6 +83,12 @@ case "site":
 case "proxy":
     do {
         try await runProxy(Array(arguments.dropFirst()), paths: .fromEnvironment())
+    } catch {
+        fail(error.localizedDescription)
+    }
+case "dns":
+    do {
+        try await runDNS(Array(arguments.dropFirst()), paths: .fromEnvironment())
     } catch {
         fail(error.localizedDescription)
     }

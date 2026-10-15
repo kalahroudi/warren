@@ -1,6 +1,6 @@
 # 006 · Custom local domains and DNS
 
-Status: Draft · Phase 1 · Depends on: 004, 005
+Status: Implemented, pending the resolver check · Phase 1 · Depends on: 004, 005
 
 ## Goal
 
@@ -39,6 +39,8 @@ Any domain a site claims in `.warren.toml` (`acme.test`, `shop.dev`, `hello.exam
 
 Zones nested inside another claimed zone are dropped, and the list is sorted, so the same sites always give the same result.
 
+**Names outside the zones are REFUSED by default.** CoreDNS answers REFUSED for any name that no server block covers, so the Corefile needs no catch-all block (an early draft tried a `refuse` directive, which this build does not have).
+
 **The DNS server.** `warren dns run` generates a Corefile and runs CoreDNS on `127.0.0.1` and `::1`, port 5354 by default (`--port` to change), TCP and UDP, as the current user. Each zone answers `A` with `127.0.0.1` and `AAAA` with `::1`, for the zone and all its subdomains. Anything outside the zones is REFUSED, so Warren can never answer for a real domain it was not asked about. CoreDNS reloads its Corefile on change, so `warren dns sync` applies a changed registry without a restart.
 
 **Resolver files.** Each zone needs `/etc/resolver/<zone>` containing:
@@ -58,18 +60,21 @@ Creating files in `/etc/resolver` needs an admin password. `warren dns enable` p
 - `warren dns run [--port N]` runs it in the foreground; Ctrl-C stops it.
 - `warren dns sync` rewrites the Corefile from the registry.
 - `warren dns enable` and `warren dns disable` manage the resolver files.
+- `WARREN_RESOLVER_DIR` points the resolver-file commands at another directory, which then needs no admin password. It exists so the full flow can be exercised without touching `/etc/resolver`.
 - `warren dns status` shows zones, whether CoreDNS is installed and running, which resolver files are present or missing, and **an end-to-end check through the real macOS resolver** for each domain.
 
 ## Acceptance criteria
 
-1. [ ] `dns install` downloads the pinned CoreDNS and verifies its SHA-256; a corrupted archive is rejected and removed.
-2. [ ] Zone planning is unit tested: reserved TLD gives a TLD zone, other domains give an exact zone, `*.localhost` is skipped, `*.local` is rejected, nested zones are dropped, output is sorted and stable.
-3. [ ] Corefile generation is unit tested: loopback bind only, A and AAAA templates per zone, no catch-all.
-4. [ ] With the real CoreDNS, a registered name gets `127.0.0.1` and `::1`, a subdomain works, and an unregistered name gets REFUSED.
-5. [ ] `dns sync` adds a new domain to the running server without a restart.
-6. [ ] The resolver file plan is unit tested. `enable` shows the exact files and asks first, only writes Warren-marked files, refuses to overwrite a foreign file, and `disable` removes only Warren's.
-7. [ ] CoreDNS runs unprivileged, listens on loopback only, and Ctrl-C leaves no process behind.
+1. [x] `dns install` downloads the pinned CoreDNS and verifies its SHA-256; a corrupted archive is rejected and removed.
+2. [x] Zone planning is unit tested: reserved TLD gives a TLD zone, other domains give an exact zone, `*.localhost` is skipped, `*.local` is rejected, nested zones are dropped, output is sorted and stable.
+3. [x] Corefile generation is unit tested: loopback bind only, A and AAAA templates per zone, no catch-all.
+4. [x] With the real CoreDNS, a registered name gets `127.0.0.1` and `::1`, a subdomain works, and an unregistered name gets REFUSED.
+5. [x] `dns sync` adds a new domain to the running server without a restart.
+6. [x] The resolver file plan is unit tested. `enable` shows the exact files and asks first, only writes Warren-marked files, refuses to overwrite a foreign file, and `disable` removes only Warren's.
+7. [x] CoreDNS runs unprivileged, listens on loopback only, and Ctrl-C leaves no process behind.
 8. [ ] After `enable`, the macOS resolver answers for a registered domain (`dns status` end-to-end check), and a browser reaches `https://acme.test` through the proxy with the trusted certificate.
+
+*Verified with the real CoreDNS 1.14.7 download through the `warren` CLI: install with SHA-256, a TLD zone and exact zones, A and AAAA answers, REFUSED for `other.dev` and `google.com`, a domain added with `dns sync` and answered with no restart, a busy port naming the process holding it, loopback-only unprivileged listeners (TCP and UDP), and a clean Ctrl-C. For criterion 6 the full `enable` and `disable` flow ran against a temporary directory: it asked first, wrote the exact files, was idempotent, refused a foreign file without changing anything, rewrote a stale file, and removed only Warren's files. **What was not run is the write to `/etc/resolver` itself and criterion 8**, which need your admin password and a browser. See below.*
 
 ## Test plan
 

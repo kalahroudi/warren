@@ -11,7 +11,7 @@ Warren should be built from stable, existing parts. This list is a starting poin
 | Package caches | pnpm, uv, Bun and Composer shared stores, pointed at one location by environment variables | Their own caches | 007 |
 | Framework and project detection | Nixpacks and Railpack detectors, buildpacks, `package.json` and lockfile heuristics | Evaluate Railpack and Nixpacks before writing detectors | 010, 011 |
 | Reverse proxy and local HTTPS | Caddy (automatic HTTPS, internal CA, admin API for live config), mkcert plus a proxy | Caddy as a managed helper binary (decided in 005) | 005 |
-| Local DNS for custom domains | dnsmasq, macOS per-domain resolver files, `/etc/hosts` | dnsmasq with a resolver file | 006 |
+| Local DNS for custom domains | dnsmasq, macOS per-domain resolver files, `/etc/hosts` | CoreDNS with per-domain resolver files (decided in 006) | 006 |
 | Database and service binaries | Upstream release binaries, Homebrew bottles, Postgres.app-style builds, embedded-postgres binaries | Evaluate; prefer upstream binaries we verify by checksum | 015 to 018 |
 | Compose files from imported repos | `docker compose config` (normalizes and validates), the Compose specification | Shell out to Compose, do not parse YAML ourselves | 019 |
 | Containers | Docker, OrbStack, Podman, Apple's `container` | Drive whichever is installed through its CLI | 019 |
