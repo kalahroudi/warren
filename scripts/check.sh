@@ -8,7 +8,7 @@ for tool in swiftlint swiftformat; do
   command -v "$tool" >/dev/null 2>&1 || { echo "$tool not found. Run: just setup"; exit 1; }
 done
 
-echo "== format";  swiftformat --lint Sources Tests Package.swift
+echo "== format";  swiftformat Sources Tests Package.swift --lint
 echo "== lint";    swiftlint lint --strict
 echo "== spdx";    scripts/check-spdx.sh
 echo "== build";   swift build
