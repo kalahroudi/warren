@@ -15,8 +15,8 @@ Warren launches as a menu bar app with the icon, popover and main window from th
 
 - Menu bar item with a monochrome template icon (adapts to light and dark menu bars). No Dock icon unless the main window is open.
 - Click opens the popover (mockup board 1): header with pause-all and settings, Sites, Services, Active runtimes, update banner slot, agent status footer.
-- "Open Warren" (⌘O) opens the main window with a sidebar: Sites, Services, Runtimes, Agents, Storage. Each section renders the mockup layout from fixtures. Screens that depend on later specs show their fixture state and are marked internally as `preview`.
-- Launch at login is a setting, off by default.
+- "Open Warren" (⌘O) opens the main window with a sidebar: Sites, Services, Runtimes, Agents, Storage. Each section renders the mockup layout from fixtures. The window shows a "Preview · demo data" label, so fixture state is never mistaken for real state.
+- Launch at login is not part of this spec. It moves to spec 035 (Settings), since it needs the helper from spec 015.
 - All UI reads state through one `StateProvider` interface; 002 ships a `FixtureProvider`. Later specs add the real one.
 - Built with SwiftUI (`MenuBarExtra` for the popover) and AppKit where SwiftUI falls short. No embedded web view.
 - Idle budget: under 80 MB RSS with the popover closed and the window closed. (The first draft said 40 MB. A SwiftUI `MenuBarExtra` app measured 72 MB, so the budget was revised. Getting lower means an AppKit popover and is a follow-up if we want it.)
