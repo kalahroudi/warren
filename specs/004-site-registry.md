@@ -13,6 +13,13 @@ Warren knows which sites exist and how each is configured. A persistent registry
 - No UI wiring. The app keeps its demo data until a real `StateProvider` exists.
 - Single writer. Cross-process locking arrives with the helper (spec 015).
 
+## Prior art
+
+- **TOMLDecoder** (MIT, pure Swift, full TOML spec, line-numbered errors): **used** to parse `.warren.toml`.
+- TOMLKit and swift-toml wrap the C++ toml++ parser: rejected, since a pure Swift library avoids a C++ build dependency.
+- A hand-written parser: rejected under the reuse-before-build rule. An earlier draft of this spec had one; it was replaced.
+- JSON for the registry file uses Foundation's `Codable`.
+
 ## Behavior
 
 **Locations.** Warren's home is `~/Warren`, overridable with `WARREN_HOME`. The registry is `config/sites.json` under it.
@@ -48,7 +55,7 @@ port = 3000
 postgres = "17"
 ```
 
-Supported TOML subset: comments, `[tables]`, strings (basic and literal), integers, booleans, and single-line arrays of strings. Anything else is a clear error with a line number. Unknown keys are warnings, so newer files still load. Wrong types are errors.
+The file is parsed by TOMLDecoder, so all of TOML is accepted (multi-line arrays, inline tables, dotted keys). Syntax errors and wrong types are reported with the library's own message and line number. Unknown keys, including unknown tables, are warnings, so newer files still load.
 
 **Domains.** Lowercase labels of `a-z`, `0-9` and `-`, no leading or trailing hyphen, at most 253 characters, and at least two labels (`acme.test`, not `acme`). Two sites may not claim the same domain; adding a conflicting site fails and names the other site.
 
@@ -76,11 +83,11 @@ Supported TOML subset: comments, `[tables]`, strings (basic and literal), intege
 11. [x] `site remove` unregisters the site and leaves the project directory untouched.
 12. [x] `WARREN_HOME` relocates all state.
 
-*All twelve were exercised against the real `warren` binary with a throwaway `WARREN_HOME` (see the PR). The unit tests mirror them and run in CI; they could not be run on the author's machine because the Command Line Tools' Testing macros are out of step with the compiler.*
+*All twelve were exercised against the real `warren` binary with a throwaway `WARREN_HOME` (see the PR), and the unit tests pass locally and in CI.*
 
 ## Test plan
 
-Unit tests (Swift Testing) for the TOML subset, config validation, domain rules, and the registry against a temporary `WARREN_HOME`. A manual CLI walkthrough of criteria 1 to 4 and 11 on the author's machine, recorded in the PR.
+Unit tests (Swift Testing) for config validation, domain rules, and the registry against a temporary `WARREN_HOME`. TOML parsing itself is the library's job and is not retested. A manual CLI walkthrough of criteria 1 to 4 and 11 on the author's machine, recorded in the PR.
 
 ## Rollout
 
