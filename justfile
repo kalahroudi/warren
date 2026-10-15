@@ -14,5 +14,5 @@ check:
 
 # Build the dev app bundle and launch it
 dev:
-    scripts/bundle-app.sh
+    scripts/build-app.sh
     open build/Warren.app

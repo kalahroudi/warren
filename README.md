@@ -46,7 +46,7 @@ Warren is not released yet, so for now you build it from source (macOS 14 or new
 git clone https://github.com/kalahroudi/warren && cd warren
 brew install just
 just setup
-just dev      # builds and launches a development Warren.app (menu bar icon appears)
+just dev      # builds with swiftc alone and launches Warren.app (menu bar icon appears)
 ```
 
 Planned, once spec 003 ships: a signed and notarized `.dmg` on GitHub Releases, `brew install --cask warren`, and silent delta auto-updates.

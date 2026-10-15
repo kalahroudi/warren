@@ -34,4 +34,4 @@ just check   # the single gate
 just dev     # build and launch a dev Warren.app
 ```
 
-Known environment issue: a mismatched Xcode Command Line Tools install (compiler older than the SDK) breaks `swift build`. Reinstall the tools or install full Xcode.
+`just dev` compiles with `swiftc` alone (see `scripts/build-app.sh`), picking an SDK the installed compiler can read, so it works with only the Command Line Tools. `just check` uses SwiftPM, which needs a matching toolchain (CI has one). If SwiftPM crashes locally with an SDK/compiler mismatch, rely on `just dev` and CI.
