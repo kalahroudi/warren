@@ -3,15 +3,21 @@
 import SwiftUI
 import WarrenCore
 
-/// Placeholder shell until spec 002.
 @main
 struct WarrenApp: App {
+    @StateObject private var model = AppModel(provider: FixtureProvider())
+
     var body: some Scene {
-        MenuBarExtra("Warren", systemImage: "door.left.hand.closed") {
-            Text("Warren \(Warren.version)")
-            Divider()
-            Button("Quit Warren") { NSApplication.shared.terminate(nil) }
-                .keyboardShortcut("q")
+        MenuBarExtra {
+            PopoverView(model: model)
+        } label: {
+            Image(nsImage: MenuBarIcon.make())
         }
+        .menuBarExtraStyle(.window)
+
+        Window("Warren", id: MainWindow.id) {
+            MainWindowView(model: model)
+        }
+        .defaultSize(width: 1100, height: 720)
     }
 }

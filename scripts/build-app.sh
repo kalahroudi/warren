@@ -30,11 +30,11 @@ mkdir -p "$out/obj" "$app/Contents/MacOS" "$app/Contents/Resources"
 
 swiftc -sdk "$sdk" -target "$target" -swift-version 6 -O -wmo -parse-as-library \
   -module-name WarrenCore -emit-module -emit-module-path "$out/obj/WarrenCore.swiftmodule" \
-  -c Sources/WarrenCore/*.swift -o "$out/obj/WarrenCore.o"
+  -c $(find Sources/WarrenCore -name "*.swift") -o "$out/obj/WarrenCore.o"
 
 swiftc -sdk "$sdk" -target "$target" -swift-version 6 -O -parse-as-library \
   -module-name WarrenApp -I "$out/obj" \
-  Sources/WarrenApp/*.swift "$out/obj/WarrenCore.o" -o "$app/Contents/MacOS/Warren"
+  $(find Sources/WarrenApp -name "*.swift") "$out/obj/WarrenCore.o" -o "$app/Contents/MacOS/Warren"
 
 cp App/Info.plist "$app/Contents/Info.plist"
 cp App/AppIcon.icns "$app/Contents/Resources/AppIcon.icns"
