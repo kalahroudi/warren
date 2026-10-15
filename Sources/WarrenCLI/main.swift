@@ -10,6 +10,7 @@ usage: warren <command>
   site list [--json]           list registered sites
   site show <id> [--json]      show one site's resolved settings
   site remove <id>             unregister a site (never deletes files)
+  proxy <command>              local HTTPS proxy (see: warren proxy)
   --version                    print the version
 
 Warren keeps its state in ~/Warren (override with WARREN_HOME).
@@ -75,6 +76,12 @@ case "--version": print("warren \(Warren.version)")
 case "site":
     do {
         try runSite(Array(arguments.dropFirst()), registry: SiteRegistry(paths: .fromEnvironment()))
+    } catch {
+        fail(error.localizedDescription)
+    }
+case "proxy":
+    do {
+        try await runProxy(Array(arguments.dropFirst()), paths: .fromEnvironment())
     } catch {
         fail(error.localizedDescription)
     }

@@ -27,4 +27,16 @@ public struct WarrenPaths: Sendable {
     public var sitesFile: URL {
         configDirectory.appendingPathComponent("sites.json")
     }
+
+    public var binDirectory: URL {
+        root.appendingPathComponent("bin", isDirectory: true)
+    }
+
+    public var dataDirectory: URL {
+        root.appendingPathComponent("data", isDirectory: true)
+    }
+
+    public var runDirectory: URL {
+        root.appendingPathComponent("run", isDirectory: true)
+    }
 }
