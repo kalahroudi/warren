@@ -4,6 +4,7 @@ included:
 disabled_rules:
   - trailing_comma
   - nesting
+  - opening_brace
 identifier_name:
   excluded: [id]
 line_length: 140

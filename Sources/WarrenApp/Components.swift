@@ -83,18 +83,18 @@ struct AppMark: View {
 struct ArchShape: Shape {
     func path(in rect: CGRect) -> Path {
         var path = Path()
-        let w = rect.width
-        let h = rect.height
+        let width = rect.width
+        let height = rect.height
         path.move(to: CGPoint(x: rect.minX, y: rect.maxY))
-        path.addLine(to: CGPoint(x: rect.minX, y: rect.minY + h * 0.45))
-        path.addArc(center: CGPoint(x: rect.midX, y: rect.minY + h * 0.45), radius: w / 2,
+        path.addLine(to: CGPoint(x: rect.minX, y: rect.minY + height * 0.45))
+        path.addArc(center: CGPoint(x: rect.midX, y: rect.minY + height * 0.45), radius: width / 2,
                     startAngle: .degrees(180), endAngle: .degrees(0), clockwise: false)
         path.addLine(to: CGPoint(x: rect.maxX, y: rect.maxY))
-        path.move(to: CGPoint(x: rect.minX + w * 0.3, y: rect.maxY))
-        path.addLine(to: CGPoint(x: rect.minX + w * 0.3, y: rect.minY + h * 0.72))
-        path.addArc(center: CGPoint(x: rect.midX, y: rect.minY + h * 0.72), radius: w * 0.2,
+        path.move(to: CGPoint(x: rect.minX + width * 0.3, y: rect.maxY))
+        path.addLine(to: CGPoint(x: rect.minX + width * 0.3, y: rect.minY + height * 0.72))
+        path.addArc(center: CGPoint(x: rect.midX, y: rect.minY + height * 0.72), radius: width * 0.2,
                     startAngle: .degrees(180), endAngle: .degrees(0), clockwise: false)
-        path.addLine(to: CGPoint(x: rect.minX + w * 0.7, y: rect.maxY))
+        path.addLine(to: CGPoint(x: rect.minX + width * 0.7, y: rect.maxY))
         return path
     }
 }
