@@ -140,8 +140,12 @@ public struct StateSnapshot: Equatable, Sendable {
     public var capabilities: Capabilities
     /// True when sites and network status are real. False for demo data.
     public var isLive: Bool
+    /// Local HTTPS, the certificate and local domains are all set up (see the setup wizard).
+    public var setupComplete: Bool
     /// Sections that still show demo data, even in live mode. Section names match the sidebar titles.
     public var previewSections: Set<String>
+    /// A short message about something that just went wrong, such as a failed resume. Nil when all is well.
+    public var notice: String?
 
     public var runningSiteCount: Int {
         sites.filter { $0.state == .running }.count

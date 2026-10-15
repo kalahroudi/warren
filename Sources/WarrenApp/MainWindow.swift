@@ -2,18 +2,6 @@
 
 import SwiftUI
 
-enum MainWindow {
-    static let id = "main"
-
-    /// Shows the Dock icon while the window is open, then hides it again when it closes.
-    @MainActor
-    static func open(_ openWindow: OpenWindowAction) {
-        NSApp.setActivationPolicy(.regular)
-        NSApp.activate()
-        openWindow(id: id)
-    }
-}
-
 struct MainWindowView: View {
     @ObservedObject var model: AppModel
 
@@ -41,9 +29,6 @@ struct MainWindowView: View {
                 .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
         }
         .frame(minWidth: 960, minHeight: 620)
-        .onDisappear {
-            NSApp.setActivationPolicy(.accessory)
-        }
     }
 
     @ViewBuilder

@@ -67,7 +67,7 @@ struct CaddyConfigTests {
     @Test func noSitesStillProducesAValidConfig() throws {
         let plan = try CaddyConfig.plan(sites: [], ports: ProxyPorts(), paths: paths)
         #expect(plan.routes.isEmpty)
-        #expect(!plan.configJSON.contains("\"tls\""))
+        #expect(plan.configJSON.contains("warren.test"))
         _ = try decode(plan)
     }
 

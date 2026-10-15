@@ -25,7 +25,13 @@ public struct ResolverManager: Sendable {
 
     public let directory: URL
 
-    public init(directory: URL = ResolverManager.systemDirectory) {
+    /// `/etc/resolver`, or the directory named by `WARREN_RESOLVER_DIR` (used by tests and verification).
+    public static var defaultDirectory: URL {
+        ProcessInfo.processInfo.environment["WARREN_RESOLVER_DIR"]
+            .map { URL(fileURLWithPath: $0, isDirectory: true) } ?? systemDirectory
+    }
+
+    public init(directory: URL = ResolverManager.defaultDirectory) {
         self.directory = directory
     }
 

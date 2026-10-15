@@ -86,6 +86,9 @@ public struct SiteRegistry: Sendable {
             addedAt: Date()
         )
         let resolved = resolve(record)
+        if let reserved = resolved.domains.first(where: CaddyConfig.reservedDomains.contains) {
+            throw RegistryError.domainConflict(domain: reserved, otherSite: "Warren (reserved)")
+        }
         for other in contents.sites {
             let claimed = resolve(other).domains
             if let clash = resolved.domains.first(where: claimed.contains) {

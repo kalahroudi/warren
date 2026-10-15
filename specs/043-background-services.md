@@ -37,7 +37,7 @@ The local HTTPS proxy and DNS server start at login and stay running without a t
 - The popover and main window show whether the proxy and DNS server are running.
 - Screens whose data does not exist yet (Services, Runtimes, Agents, Storage) keep demo data and carry a visible "Preview" label on the section, so demo numbers are never mistaken for real ones.
 - The app picks up registry changes made from the CLI without a restart. It re-reads the state every few seconds and only redraws when something changed.
-- Controls that would do nothing yet (starting a site, pause-all) are disabled with an explanation, and there is no fake update banner. `WARREN_DEMO=1` shows the demo data instead, for screenshots and design work.
+- Controls that would do nothing yet (starting or stopping a single site) are disabled with an explanation, and there is no fake update banner. Pause and resume are real (amended in spec 044): they stop and restart the background proxy and DNS server. `WARREN_DEMO=1` shows the demo data instead, for screenshots and design work.
 - The site detail reports the real certificate state (trusted, not trusted yet, none yet, or the proxy is not running).
 
 ## Acceptance criteria

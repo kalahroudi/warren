@@ -10,6 +10,7 @@ struct LiveProviderTests {
     private let root: URL
     private let paths: WarrenPaths
     private let provider: LiveProvider
+    private let launch = FakeLaunch()
 
     init() throws {
         root = try temporaryDirectory("live")
@@ -17,7 +18,7 @@ struct LiveProviderTests {
         let background = BackgroundServices(
             paths: paths,
             agentsDirectory: root.appendingPathComponent("agents"),
-            launch: FakeLaunch()
+            launch: launch
         )
         provider = LiveProvider(paths: paths, network: NetworkServices(paths: paths, background: background))
     }
@@ -103,5 +104,78 @@ struct LiveProviderTests {
         #expect(PortCheck.isListening(listener.port))
         close(listener.descriptor)
         #expect(!PortCheck.isListening(listener.port))
+    }
+
+    // MARK: Pause
+
+    private func installTool(_ release: ToolRelease) throws {
+        let binary = ToolInstaller(paths: paths).binaryURL(for: release)
+        try FileManager.default.createDirectory(
+            at: binary.deletingLastPathComponent(),
+            withIntermediateDirectories: true
+        )
+        try "#!/bin/sh\n".write(to: binary, atomically: true, encoding: .utf8)
+        try FileManager.default.setAttributes([.posixPermissions: 0o755], ofItemAtPath: binary.path)
+    }
+
+    @Test func thereIsNothingToPauseUntilSomethingIsSetUp() {
+        #expect(!provider.snapshot().capabilities.canPause)
+    }
+
+    @Test func pauseAppearsOnceLocalHTTPSIsInstalled() throws {
+        try installTool(.caddy)
+        #expect(provider.snapshot().capabilities.canPause)
+    }
+
+    @Test func pausingStopsBothServicesAndRemembersIt() throws {
+        try installTool(.caddy)
+        launch.setLoaded("dev.warren.proxy")
+        launch.setLoaded("dev.warren.dns")
+        provider.setPaused(true)
+        #expect(launch.calls.contains("bootout dev.warren.proxy"))
+        #expect(launch.calls.contains("bootout dev.warren.dns"))
+        #expect(UserState.load(paths).paused)
+        let snapshot = provider.snapshot()
+        #expect(snapshot.paused)
+        #expect(snapshot.capabilities.canPause)
+    }
+
+    @Test func aPausedWarrenIsNotNaggedAboutSetup() throws {
+        try installTool(.caddy)
+        provider.setPaused(true)
+        #expect(provider.snapshot().setupComplete)
+    }
+
+    @Test func aFailedStartKeepsThePause() throws {
+        var user = UserState()
+        user.paused = true
+        try user.save(paths)
+        let background = BackgroundServices(
+            paths: paths,
+            agentsDirectory: root.appendingPathComponent("agents"),
+            launch: launch
+        )
+        _ = try? NetworkServices(paths: paths, background: background).startProxy(ports: ProxyPorts())
+        // The start fails (no binary installed) before it can clear the flag, so the pause is kept.
+        #expect(UserState.load(paths).paused)
+    }
+
+    @Test func aFailedResumeKeepsItPausedAndSaysWhy() throws {
+        try installTool(.caddy)
+        var user = UserState()
+        user.paused = true
+        try user.save(paths)
+        provider.setPaused(false)
+        let snapshot = provider.snapshot()
+        #expect(snapshot.notice?.hasPrefix("Could not resume") == true)
+        #expect(snapshot.paused)
+    }
+
+    @Test func oldStateFilesWithoutNewKeysStillLoad() throws {
+        try FileManager.default.createDirectory(at: paths.configDirectory, withIntermediateDirectories: true)
+        try Data(#"{"setupDismissed":true,"domainsSkipped":false}"#.utf8).write(to: paths.userStateFile)
+        let state = UserState.load(paths)
+        #expect(state.setupDismissed)
+        #expect(!state.paused)
     }
 }

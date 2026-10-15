@@ -60,7 +60,7 @@ func runProxy(_ arguments: [String], paths: WarrenPaths) async throws {
     case "run": try run(service, rest)
     case "reload": try reload(service, rest)
     case "trust": try trust(service, paths: paths, rest)
-    case "untrust": try untrust(service)
+    case "untrust": try untrust(service, paths: paths)
     case "status": try status(service, rest)
     default: throw CLIError("unknown or incomplete command\n\n\(proxyUsage)")
     }
@@ -95,24 +95,25 @@ private func reload(_ service: ProxyService, _ options: [String]) throws {
 }
 
 private func trust(_ service: ProxyService, paths: WarrenPaths, _ options: [String]) throws {
-    let command = try service.trustCommand()
+    let script = try TrustManager(paths: paths).trustScript()
     print("""
-    This adds Warren's local root certificate to your system trust store, so browsers
-    accept https://<your sites>. It asks for your admin password. The certificate can
+    This adds Warren's local root certificate to your system keychain as a trusted root, so
+    browsers accept https://<your sites>. It asks for your admin password. The certificate can
     issue certificates for any name, and its key stays in \(paths.caddyDataDirectory.path).
     Undo it any time with: warren proxy untrust
+
+    \(script)
     """)
     guard options.contains("--yes") || confirm("Trust Warren's root certificate?") else {
         throw CLIError("cancelled, nothing changed")
     }
-    guard try runForeground(command.binary, command.arguments) == 0
-    else { throw CLIError("trusting the certificate failed") }
+    try runScript(script, privileged: true)
+    print("trusted: \(service.rootTrusted() == true ? "yes" : "no")")
 }
 
-private func untrust(_ service: ProxyService) throws {
-    let command = try service.untrustCommand()
-    guard try runForeground(command.binary, command.arguments) == 0 else { throw CLIError("removing trust failed") }
-    print("Warren's root certificate is no longer trusted")
+private func untrust(_ service: ProxyService, paths: WarrenPaths) throws {
+    try runScript(TrustManager(paths: paths).untrustScript(), privileged: true)
+    print("Warren's root certificate is no longer trusted (trusted: \(service.rootTrusted() == true ? "yes" : "no"))")
 }
 
 private func status(_ service: ProxyService, _ options: [String]) throws {

@@ -17,7 +17,9 @@ extension FixtureProvider {
         ),
         capabilities: Capabilities(canControlSites: true, canPause: true),
         isLive: false,
-        previewSections: []
+        setupComplete: true,
+        previewSections: [],
+        notice: nil
     )
 
     private static let demoSites = [
