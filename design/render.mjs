@@ -22,6 +22,8 @@ const boards = {
   "Storage.dc.html": "storage",
   "Share.dc.html": "share",
   "Agents.dc.html": "agents",
+  "SetupWizard.dc.html": "setup-wizard",
+  "SetupDone.dc.html": "setup-done",
 };
 
 const canvas = JSON.parse(readFileSync(join(root, "design/mockup/canvas.json"), "utf8"));
