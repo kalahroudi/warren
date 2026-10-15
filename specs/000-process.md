@@ -22,6 +22,7 @@ Every spec in `specs/NNN-short-name.md` has these sections, in order:
 - **Status / Phase / Depends on / Amends**
 - **Goal:** one paragraph, the user-visible outcome.
 - **Non-goals:** what this spec deliberately does not do.
+- **Prior art:** existing stable tools and libraries considered, which one we use and why. Building our own needs a stated reason. Start from `docs/prior-art.md`.
 - **Behavior:** precise description, with examples and the UI states from the mockup where relevant.
 - **Acceptance criteria:** numbered, each independently testable.
 - **Test plan:** how each criterion is verified (unit, integration, manual).
@@ -30,6 +31,7 @@ Every spec in `specs/NNN-short-name.md` has these sections, in order:
 
 ## Principles every spec must respect
 
+- **Reuse before build:** do not reinvent anything that already exists and is stable. Prefer proven tools and libraries, checked for license, maintenance, macOS support and size. Custom code needs a reason written in the spec.
 - **Light:** idle footprint is a feature. Specs state their memory and disk impact.
 - **Easy to update:** no spec may require manual user steps on upgrade. Data migrations are versioned and reversible.
 - **Native first:** services and runtimes run natively; containers are an optional driver.

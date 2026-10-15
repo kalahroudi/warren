@@ -12,11 +12,12 @@ Warren is a native macOS menu bar app for running local web projects. This file 
 ## Workflow rules
 
 1. **One spec is one PR.** Find the spec in `specs/`. If behavior is not covered, write or amend a spec in the same PR and say so. Read `specs/000-process.md`.
-2. **Branch and PR. Never commit to the default branch directly.** Do not merge until a human approves.
-3. **Run `just check` before pushing.** It runs SwiftFormat (lint mode), SwiftLint (strict), the SPDX header check, the fixture-provider check, `swift build` and `swift test`.
-4. **Sign off every commit:** `git commit -s`. CI rejects unsigned commits.
-5. **SPDX header** on every `.swift` and `.sh` file: `// SPDX-License-Identifier: Apache-2.0` (or `#` for shell). The Relay server under `services/relay/` will be AGPL-3.0.
-6. **Tick acceptance criteria honestly.** Only check a criterion off if you verified it, and link or describe how. If you could not run something, say so in the spec and the PR.
+2. **Reuse before build.** Do not write what already exists and is stable. Check `docs/prior-art.md`, survey current options, and record the choice in the spec's Prior art section before writing code.
+3. **Branch and PR. Never commit to the default branch directly.** Do not merge until a human approves.
+4. **Run `just check` before pushing.** It runs SwiftFormat (lint mode), SwiftLint (strict), the SPDX header check, the fixture-provider check, `swift build` and `swift test`.
+5. **Sign off every commit:** `git commit -s`. CI rejects unsigned commits.
+6. **SPDX header** on every `.swift` and `.sh` file: `// SPDX-License-Identifier: Apache-2.0` (or `#` for shell). The Relay server under `services/relay/` will be AGPL-3.0.
+7. **Tick acceptance criteria honestly.** Only check a criterion off if you verified it, and link or describe how. If you could not run something, say so in the spec and the PR.
 
 ## Design principles to respect
 
