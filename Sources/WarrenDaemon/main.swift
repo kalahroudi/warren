@@ -2,5 +2,5 @@
 
 import WarrenCore
 
-// Placeholder. The supervisor arrives with the service manager (spec 015).
+// Placeholder until the service manager lands (spec 015).
 print("warrend \(Warren.version)")

@@ -1,0 +1,141 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Warren storage</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<style>
+body{margin:0;font-family:-apple-system,"SF Pro Text",system-ui,sans-serif}
+button{font-family:inherit}
+</style>
+</helmet>
+<div style="width:1180px;height:760px;display:flex;background:#15171c;color:#e8eaed;overflow:hidden">
+  <div style="width:220px;flex:none;background:#1a1d23;border-right:1px solid rgba(255,255,255,.07);padding:16px 12px;box-sizing:border-box;display:flex;flex-direction:column;gap:2px">
+    <div style="display:flex;gap:8px;padding:0 6px 18px"><span style="width:12px;height:12px;border-radius:50%;background:#ff5f57"></span><span style="width:12px;height:12px;border-radius:50%;background:#febc2e"></span><span style="width:12px;height:12px;border-radius:50%;background:#28c840"></span></div>
+    <div style="display:flex;align-items:center;gap:9px;padding:0 8px 14px">
+      <div style="width:26px;height:26px;border-radius:8px;background:linear-gradient(145deg,#7bf0b8,#2fbf8a);display:flex;align-items:center;justify-content:center"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#06281b" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 21V12a8 8 0 0 1 16 0v9"/><path d="M9 21v-5a3 3 0 0 1 6 0v5"/></svg></div>
+      <span style="font-weight:600;font-size:15px;letter-spacing:-.01em">Warren</span>
+    </div>
+    <sc-for list="{{nav}}" as="n" hint-placeholder-count="5">
+      <a href="{{n.href}}" style="display:flex;align-items:center;gap:10px;padding:8px 10px;border-radius:8px;text-decoration:none;font-size:13.5px;color:{{n.color}};background:{{n.bg}}">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="{{n.icon}}"/></svg>
+        <span style="flex-grow:1">{{n.label}}</span><span style="font-size:11.5px;color:#7d848f">{{n.count}}</span>
+      </a>
+    </sc-for>
+  </div>
+
+  <div style="flex-grow:1;min-width:0;display:flex;flex-direction:column;padding:20px 28px;box-sizing:border-box;gap:16px">
+    <div>
+      <h1 style="margin:0;font-size:22px;font-weight:650;letter-spacing:-.02em">Storage</h1>
+      <div style="font-size:13px;color:#8f96a1;margin-top:2px">Everything Warren keeps on disk, and what is safe to get back.</div>
+    </div>
+
+    <!-- hero -->
+    <div style="display:flex;gap:14px">
+      <div style="flex:1.5;min-width:0;padding:16px 18px;border-radius:14px;background:#1b1e25;border:1px solid rgba(255,255,255,.07)">
+        <div style="display:flex;align-items:baseline;gap:8px"><span style="font-size:30px;font-weight:700;letter-spacing:-.03em">48.3 GB</span><span style="font-size:13px;color:#8f96a1">used by Warren, 5 sites</span></div>
+        <div style="display:flex;height:12px;border-radius:999px;overflow:hidden;margin:14px 0 12px;gap:2px">
+          <div style="width:44.3%;background:#5ee6a8"></div><div style="width:18.8%;background:#6aa9ff"></div><div style="width:17.8%;background:#c4a7ff"></div><div style="width:19.1%;background:#f5b84b"></div>
+        </div>
+        <div style="display:flex;gap:18px;flex-wrap:wrap">
+          <sc-for list="{{legend}}" as="l" hint-placeholder-count="4">
+            <div style="display:flex;align-items:center;gap:7px;font-size:12.5px"><span style="width:9px;height:9px;border-radius:3px;background:{{l.color}}"></span><span style="color:#d6dae0">{{l.label}}</span><span style="color:#8f96a1">{{l.size}}</span></div>
+          </sc-for>
+        </div>
+      </div>
+      <div style="flex:1;min-width:0;padding:16px 18px;border-radius:14px;background:linear-gradient(135deg,rgba(94,230,168,.14),rgba(94,230,168,.04));border:1px solid rgba(94,230,168,.3);display:flex;flex-direction:column;justify-content:space-between;gap:10px">
+        <div><div style="font-size:12px;color:#8fd9b8">Reclaimable</div><div style="font-size:30px;font-weight:700;letter-spacing:-.03em;color:#5ee6a8">14.2 GB</div><div style="font-size:12px;color:#8fb8a5;margin-top:2px">Nothing here is your source code. All of it comes back on demand.</div></div>
+        <button style="padding:9px 14px;border-radius:9px;border:none;background:#5ee6a8;color:#06281b;font-weight:600;font-size:13px;cursor:pointer">Review &amp; reclaim</button>
+      </div>
+    </div>
+
+    <div style="display:flex;gap:14px;flex-grow:1;min-height:0">
+      <!-- reclaim list -->
+      <div style="flex:1.5;min-width:0;padding:16px;border-radius:14px;background:#1b1e25;border:1px solid rgba(255,255,255,.07);display:flex;flex-direction:column;gap:2px">
+        <div style="font-size:14.5px;font-weight:600;margin-bottom:6px">What would be removed</div>
+        <sc-for list="{{reclaim}}" as="r" hint-placeholder-count="5">
+          <div style="display:flex;align-items:center;gap:12px;padding:9px 0;border-top:1px solid rgba(255,255,255,.06)">
+            <span style="width:18px;height:18px;border-radius:5px;background:#5ee6a8;color:#06281b;font-size:12px;font-weight:700;display:flex;align-items:center;justify-content:center;flex:none">✓</span>
+            <div style="flex-grow:1;min-width:0"><div style="font-size:13.5px;font-weight:500">{{r.title}}</div><div style="font-size:12px;color:#8f96a1">{{r.note}}</div></div>
+            <span style="font-size:13px;font-weight:600;font-family:ui-monospace,'SF Mono',monospace">{{r.size}}</span>
+          </div>
+        </sc-for>
+      </div>
+
+      <div style="flex:1;min-width:0;display:flex;flex-direction:column;gap:14px">
+        <!-- biggest sites -->
+        <div style="padding:16px;border-radius:14px;background:#1b1e25;border:1px solid rgba(255,255,255,.07);display:flex;flex-direction:column;gap:2px">
+          <div style="font-size:14.5px;font-weight:600;margin-bottom:6px">Biggest sites</div>
+          <sc-for list="{{sites}}" as="s" hint-placeholder-count="4">
+            <div style="display:flex;align-items:center;gap:10px;padding:7px 0;border-top:1px solid rgba(255,255,255,.06)">
+              <span style="font-size:13px;flex-grow:1">{{s.name}}</span>
+              <span style="font-size:11px;padding:2px 8px;border-radius:999px;background:{{s.bg}};color:{{s.color}}">{{s.state}}</span>
+              <span style="font-size:12.5px;font-family:ui-monospace,'SF Mono',monospace;width:56px;text-align:right">{{s.size}}</span>
+            </div>
+          </sc-for>
+        </div>
+        <!-- policies -->
+        <div style="padding:16px;border-radius:14px;background:#1b1e25;border:1px solid rgba(255,255,255,.07);display:flex;flex-direction:column;gap:2px">
+          <div style="font-size:14.5px;font-weight:600;margin-bottom:6px">Policies</div>
+          <sc-for list="{{policies}}" as="p" hint-placeholder-count="3">
+            <div style="display:flex;align-items:center;gap:10px;padding:7px 0;border-top:1px solid rgba(255,255,255,.06)">
+              <span style="font-size:12.5px;flex-grow:1;color:#d6dae0">{{p.label}}</span>
+              <span style="font-size:12px;color:#8f96a1">{{p.value}}</span>
+            </div>
+          </sc-for>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1180,"height":760}}'>
+class Component extends DCLogic {
+  renderVals() {
+    const act = (i) => ({ color: i ? '#fff' : '#b5bbc5', bg: i ? 'rgba(255,255,255,.09)' : 'transparent' });
+    const nav = [
+      ['Sites', 'M3 12 12 3l9 9M5 10v10h14V10', '5', 'Sites.dc.html', 0],
+      ['Services', 'M4 6h16M4 12h16M4 18h16', '7', 'Services.dc.html', 0],
+      ['Runtimes', 'M12 3 3 8v8l9 5 9-5V8z', '9', 'Runtimes.dc.html', 0],
+      ['Agents', 'M12 3v4M8 7h8v6H8zM6 21v-4h12v4', 'MCP', 'Agents.dc.html', 0],
+      ['Storage', 'M4 7c0-1.7 3.6-3 8-3s8 1.3 8 3-3.6 3-8 3-8-1.3-8-3zM4 7v10c0 1.7 3.6 3 8 3s8-1.3 8-3V7', '48 GB', 'Storage.dc.html', 1]
+    ].map(([label, icon, count, href, a]) => ({ label, icon, count, href, ...act(a) }));
+    const ok = { bg: 'rgba(94,230,168,.14)', color: '#5ee6a8' };
+    const sleep = { bg: 'rgba(255,255,255,.08)', color: '#b5bbc5' };
+    const warn = { bg: 'rgba(245,184,75,.14)', color: '#f6c667' };
+    return {
+      nav,
+      legend: [
+        { label: 'Sites', size: '21.4 GB', color: '#5ee6a8' },
+        { label: 'Runtimes', size: '9.1 GB', color: '#6aa9ff' },
+        { label: 'Services', size: '8.6 GB', color: '#c4a7ff' },
+        { label: 'Caches', size: '9.2 GB', color: '#f5b84b' }
+      ],
+      reclaim: [
+        { title: 'Hibernate 3 inactive sites', note: 'docs.dev, old-landing, hackathon-24. Not opened in 30+ days. Lockfiles found.', size: '6.1 GB' },
+        { title: 'Package cache over its 10 GB budget', note: 'Least recently used pnpm and uv entries', size: '3.8 GB' },
+        { title: '3 unused runtimes', note: 'Node 18.20, Python 3.11, PHP 8.2. Re-downloaded when needed.', size: '1.9 GB' },
+        { title: 'Build caches', note: '.next/cache, .turbo, vite in idle sites', size: '1.6 GB' },
+        { title: 'Orphaned database files', note: 'Postgres data from the deleted "blog-v1" site', size: '0.8 GB' }
+      ],
+      sites: [
+        { name: 'acme.test', size: '4.2 GB', state: 'active', ...ok },
+        { name: 'billing.test', size: '3.6 GB', state: 'active', ...ok },
+        { name: 'hackathon-24', size: '2.9 GB', state: 'idle 41d', ...warn },
+        { name: 'docs.dev', size: '0.1 GB', state: 'hibernated', ...sleep }
+      ],
+      policies: [
+        { label: 'Hibernate sites after', value: '30 days · ask first' },
+        { label: 'Remove unused runtimes after', value: '30 days · automatic' },
+        { label: 'Package cache budget', value: '10 GB' }
+      ]
+    };
+  }
+}
+</script>
+</body>
+</html>

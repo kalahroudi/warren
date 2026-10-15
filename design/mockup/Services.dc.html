@@ -1,0 +1,90 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Warren services</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<style>
+body{margin:0;font-family:-apple-system,"SF Pro Text",system-ui,sans-serif}
+button{font-family:inherit}
+</style>
+</helmet>
+<div style="width:1180px;height:760px;display:flex;background:#15171c;color:#e8eaed;overflow:hidden">
+  <div style="width:220px;flex:none;background:#1a1d23;border-right:1px solid rgba(255,255,255,.07);padding:16px 12px;box-sizing:border-box;display:flex;flex-direction:column;gap:2px">
+    <div style="display:flex;gap:8px;padding:0 6px 18px"><span style="width:12px;height:12px;border-radius:50%;background:#ff5f57"></span><span style="width:12px;height:12px;border-radius:50%;background:#febc2e"></span><span style="width:12px;height:12px;border-radius:50%;background:#28c840"></span></div>
+    <div style="display:flex;align-items:center;gap:9px;padding:0 8px 14px">
+      <div style="width:26px;height:26px;border-radius:8px;background:linear-gradient(145deg,#7bf0b8,#2fbf8a);display:flex;align-items:center;justify-content:center"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#06281b" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 21V12a8 8 0 0 1 16 0v9"/><path d="M9 21v-5a3 3 0 0 1 6 0v5"/></svg></div>
+      <span style="font-weight:600;font-size:15px;letter-spacing:-.01em">Warren</span>
+    </div>
+    <sc-for list="{{nav}}" as="n" hint-placeholder-count="4">
+      <a href="{{n.href}}" style="display:flex;align-items:center;gap:10px;padding:8px 10px;border-radius:8px;text-decoration:none;font-size:13.5px;color:{{n.color}};background:{{n.bg}}">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="{{n.icon}}"/></svg>
+        <span style="flex-grow:1">{{n.label}}</span><span style="font-size:11.5px;color:#7d848f">{{n.count}}</span>
+      </a>
+    </sc-for>
+  </div>
+
+  <div style="flex-grow:1;min-width:0;display:flex;flex-direction:column;padding:20px 28px;box-sizing:border-box;gap:18px">
+    <div style="display:flex;align-items:center;justify-content:space-between">
+      <div><h1 style="margin:0;font-size:22px;font-weight:650;letter-spacing:-.02em">Services</h1><div style="font-size:13px;color:#8f96a1;margin-top:2px">One click databases and the usual suspects. Data lives in ~/Warren/data.</div></div>
+      <button style="padding:8px 14px;border-radius:8px;border:none;background:#5ee6a8;color:#06281b;font-weight:600;font-size:13px;cursor:pointer">+ Add service</button>
+    </div>
+
+    <div style="display:flex;gap:8px">
+      <sc-for list="{{filters}}" as="f" hint-placeholder-count="5">
+        <span style="font-size:12.5px;padding:5px 12px;border-radius:999px;background:{{f.bg}};color:{{f.color}};border:1px solid rgba(255,255,255,.08)">{{f.label}}</span>
+      </sc-for>
+    </div>
+
+    <div style="display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px">
+      <sc-for list="{{services}}" as="v" hint-placeholder-count="6">
+        <div style="padding:16px;border-radius:14px;background:#1b1e25;border:1px solid rgba(255,255,255,.07);display:flex;flex-direction:column;gap:12px">
+          <div style="display:flex;align-items:center;gap:12px">
+            <div style="width:38px;height:38px;border-radius:10px;background:{{v.tint}};display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;color:#0d1013">{{v.badge}}</div>
+            <div style="flex-grow:1;min-width:0"><div style="font-size:14.5px;font-weight:600">{{v.name}}</div><div style="font-size:12px;color:#8f96a1">{{v.kind}}</div></div>
+            <div style="width:34px;height:20px;border-radius:999px;position:relative;background:{{v.track}}"><div style="position:absolute;top:2px;left:{{v.knob}};width:16px;height:16px;border-radius:50%;background:#fff"></div></div>
+          </div>
+          <div style="display:flex;justify-content:space-between;font-family:ui-monospace,'SF Mono',monospace;font-size:12px;color:#9aa1ac;padding:8px 10px;border-radius:8px;background:rgba(0,0,0,.25)"><span>{{v.url}}</span><span style="color:#7d848f">{{v.mem}}</span></div>
+          <div style="display:flex;gap:8px;font-size:12px;color:#b5bbc5"><span>Copy URL</span><span style="color:#4a505a">·</span><span>Logs</span><span style="color:#4a505a">·</span><span>Versions</span></div>
+        </div>
+      </sc-for>
+      <div style="padding:16px;border-radius:14px;border:1.5px dashed rgba(255,255,255,.16);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;color:#8f96a1;font-size:13px;min-height:120px"><span style="font-size:22px;color:#5ee6a8">+</span>Browse catalog<span style="font-size:11.5px">Supabase local, Qdrant, Ollama, NATS…</span></div>
+    </div>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1180,"height":760}}'>
+class Component extends DCLogic {
+  renderVals() {
+    const on = '#5ee6a8', off = '#5c636e';
+    const act = (i) => ({ color: i ? '#fff' : '#b5bbc5', bg: i ? 'rgba(255,255,255,.09)' : 'transparent' });
+    const nav = [
+      ['Sites', 'M3 12 12 3l9 9M5 10v10h14V10', '5', 'Sites.dc.html', 0],
+      ['Services', 'M4 6h16M4 12h16M4 18h16', '7', 'Services.dc.html', 1],
+      ['Runtimes', 'M12 3 3 8v8l9 5 9-5V8z', '9', 'Runtimes.dc.html', 0],
+      ['Agents', 'M12 3v4M8 7h8v6H8zM6 21v-4h12v4', 'MCP', 'Agents.dc.html', 0],
+      ['Storage', 'M4 7c0-1.7 3.6-3 8-3s8 1.3 8 3-3.6 3-8 3-8-1.3-8-3zM4 7v10c0 1.7 3.6 3 8 3s8-1.3 8-3V7', '48 GB', 'Storage.dc.html', 0]
+    ].map(([label, icon, count, href, a]) => ({ label, icon, count, href, ...act(a) }));
+    const f = (label, a) => ({ label, color: a ? '#06281b' : '#b5bbc5', bg: a ? '#5ee6a8' : 'transparent' });
+    const s = (name, kind, badge, tint, url, mem, run) => ({ name, kind, badge, tint, url, mem, track: run ? on : off, knob: run ? '16px' : '2px' });
+    return {
+      nav,
+      filters: [f('All', 1), f('Databases', 0), f('Cache & queues', 0), f('Storage', 0), f('Mail & dev tools', 0)],
+      services: [
+        s('PostgreSQL 17', 'Database', 'Pg', '#7fb2ff', 'localhost:5432', '142 MB', 1),
+        s('Redis 7', 'Cache & queues', 'Re', '#ff7a7a', 'localhost:6379', '18 MB', 1),
+        s('MySQL 8.4', 'Database', 'My', '#f5b84b', 'localhost:3306', 'stopped', 0),
+        s('Mailpit', 'Mail catcher', 'Ma', '#c4a7ff', 'localhost:8025', '12 MB', 1),
+        s('MinIO', 'S3 storage', 'Mi', '#ff9d57', 'localhost:9000', 'stopped', 0),
+        s('Meilisearch', 'Search', 'Me', '#ff6bb0', 'localhost:7700', 'stopped', 0)
+      ]
+    };
+  }
+}
+</script>
+</body>
+</html>

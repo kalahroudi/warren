@@ -3,7 +3,7 @@
 import SwiftUI
 import WarrenCore
 
-/// Placeholder shell. The real menu bar UI arrives in spec 002.
+/// Placeholder shell until spec 002.
 @main
 struct WarrenApp: App {
     var body: some Scene {

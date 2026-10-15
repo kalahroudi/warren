@@ -40,7 +40,7 @@ One row is one spec is one PR. Mockup: https://claude.ai/artifact/QdJZC1qARd8Sbc
 | 033 | MCP storage tools | 7 Storage |
 | 034 | Logs UI | 8 Polish |
 | 035 | Settings and optional shell shim | 8 Polish |
-| 036 | Onboarding and import from Herd and others | 8 Polish |
+| 036 | Onboarding and import from other local dev tools | 8 Polish |
 
 ## Notes
 
