@@ -5,23 +5,7 @@
 set -euo pipefail
 cd "$(git rev-parse --show-toplevel)"
 
-target="$(uname -m)-apple-macos14"
-
-# The newest SDK is sometimes ahead of the installed compiler, so pick the first one it can read.
-pick_sdk() {
-  local candidates=("${SDKROOT:-}" "$(xcrun --show-sdk-path 2>/dev/null || true)")
-  while IFS= read -r path; do candidates+=("$path"); done \
-    < <(ls -d /Library/Developer/CommandLineTools/SDKs/MacOSX*.sdk 2>/dev/null | sort -r)
-  for sdk in "${candidates[@]}"; do
-    [ -n "$sdk" ] && [ -d "$sdk" ] || continue
-    if echo 'import AppKit' | swiftc -sdk "$sdk" -target "$target" -typecheck - >/dev/null 2>&1; then
-      echo "$sdk"
-      return 0
-    fi
-  done
-  return 1
-}
-sdk="$(pick_sdk)" || { echo "No usable macOS SDK. Run: xcode-select --install" >&2; exit 1; }
+source scripts/lib/sdk.sh
 
 out=build
 app="$out/Warren.app"

@@ -32,6 +32,7 @@ The MCP server is planned (specs 020 to 022) and is **not built yet**. Planned t
 just setup   # verify/install toolchain
 just check   # the single gate
 just dev     # build and launch a dev Warren.app
+just warren site list --json   # build and run the CLI; see docs/warren-toml.md
 ```
 
 `just dev` compiles with `swiftc` alone (see `scripts/build-app.sh`), picking an SDK the installed compiler can read, so it works with only the Command Line Tools. `just check` uses SwiftPM, which needs a matching toolchain (CI has one). If SwiftPM crashes locally with an SDK/compiler mismatch, rely on `just dev` and CI.

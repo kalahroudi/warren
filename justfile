@@ -16,3 +16,8 @@ check:
 dev:
     scripts/build-app.sh
     open build/Warren.app
+
+# Build the warren CLI and run it, e.g. `just warren site list`
+warren *args:
+    scripts/build-cli.sh
+    build/bin/warren {{args}}
