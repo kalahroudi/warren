@@ -9,7 +9,15 @@ extension FixtureProvider {
         agents: demoAgents,
         storage: demoStorage,
         update: UpdateInfo(version: "0.4.2", deltaMB: 12),
-        paused: false
+        paused: false,
+        network: NetworkStatus(
+            proxy: ServiceStatus(installed: true, running: true),
+            dns: ServiceStatus(installed: true, running: true),
+            rootTrusted: true
+        ),
+        capabilities: Capabilities(canControlSites: true, canPause: true),
+        isLive: false,
+        previewSections: []
     )
 
     private static let demoSites = [

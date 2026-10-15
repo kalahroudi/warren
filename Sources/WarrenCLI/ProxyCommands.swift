@@ -8,6 +8,10 @@ let proxyUsage = """
 usage: warren proxy <command>
 
   install                        download and verify Caddy
+  start [ports]                  run the proxy in the background, now and at every login
+  stop                           stop it and remove it from login
+  restart [ports]                stop and start it again
+  logs [-f]                      show the proxy's log (-f follows it)
   config [ports]                 print the generated Caddy config
   run [ports]                    run the proxy in the foreground (Ctrl-C stops it)
   reload [ports]                 apply the current sites to the running proxy
@@ -15,11 +19,11 @@ usage: warren proxy <command>
   untrust                        remove that trust
   status [ports]                 show what is installed, running and routed
 
-ports: --http-port N --https-port N   (defaults 80 and 443)
+ports: --http-port N --https-port N   (defaults: the ports last used with start, else 80 and 443)
 """
 
-private func parsePorts(_ arguments: [String]) throws -> ProxyPorts {
-    var ports = ProxyPorts()
+private func parsePorts(_ arguments: [String], _ service: ProxyService) throws -> ProxyPorts {
+    var ports = NetworkSettings.load(service.paths).proxyPorts
     var index = 0
     while index < arguments.count {
         let flag = arguments[index]
@@ -49,7 +53,10 @@ func runProxy(_ arguments: [String], paths: WarrenPaths) async throws {
     let rest = Array(arguments.dropFirst())
     switch arguments.first {
     case "install": try await install(service)
-    case "config": try print(service.plan(ports: parsePorts(rest)).configJSON)
+    case "start", "restart": try start(service, rest)
+    case "stop": try stopBackground(.proxy, paths: paths)
+    case "logs": try showLogs(.proxy, paths: paths, rest)
+    case "config": try print(service.plan(ports: parsePorts(rest, service)).configJSON)
     case "run": try run(service, rest)
     case "reload": try reload(service, rest)
     case "trust": try trust(service, paths: paths, rest)
@@ -65,7 +72,7 @@ private func install(_ service: ProxyService) async throws {
 }
 
 private func run(_ service: ProxyService, _ options: [String]) throws {
-    let launch = try service.prepareRun(ports: parsePorts(options))
+    let launch = try service.prepareRun(ports: parsePorts(options, service))
     for route in launch.plan
         .routes
     {
@@ -82,7 +89,7 @@ private func run(_ service: ProxyService, _ options: [String]) throws {
 }
 
 private func reload(_ service: ProxyService, _ options: [String]) throws {
-    let plan = try service.reload(ports: parsePorts(options))
+    let plan = try service.reload(ports: parsePorts(options, service))
     print("reloaded: \(plan.routes.count) site(s) routed")
     printSkipped(plan)
 }
@@ -109,7 +116,7 @@ private func untrust(_ service: ProxyService) throws {
 }
 
 private func status(_ service: ProxyService, _ options: [String]) throws {
-    let status = try service.status(ports: parsePorts(options))
+    let status = try service.status(ports: parsePorts(options, service))
     print("caddy:   \(status.installedVersion.map { "installed (\($0))" } ?? "not installed")")
     print("running: \(status.running ? "yes" : "no")")
     print("trusted: \(status.rootTrusted.map { $0 ? "yes" : "no" } ?? "no root certificate yet")")
@@ -119,4 +126,14 @@ private func status(_ service: ProxyService, _ options: [String]) throws {
     for skipped in status.skipped {
         print("  skipped \(skipped.siteID): \(skipped.reason)")
     }
+}
+
+private func start(_ service: ProxyService, _ options: [String]) throws {
+    let services = NetworkServices(paths: service.paths)
+    let plan = try services.startProxy(ports: parsePorts(options, service))
+    announceBackground(.proxy, services.background)
+    for route in plan.routes {
+        print("routing \(route.domains.joined(separator: ", ")) -> localhost:\(route.port)")
+    }
+    printSkipped(plan)
 }

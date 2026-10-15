@@ -38,4 +38,38 @@ public enum PortCheck {
         guard let command, let pid else { return nil }
         return "\(command) (pid \(pid))"
     }
+
+    /// True if something accepts TCP connections on the port on loopback, over IPv4 or IPv6.
+    public static func isListening(_ port: Int) -> Bool {
+        connects(family: AF_INET, port: port) || connects(family: AF_INET6, port: port)
+    }
+
+    private static func connects(family: Int32, port: Int) -> Bool {
+        let descriptor = socket(family, SOCK_STREAM, 0)
+        guard descriptor >= 0 else { return false }
+        defer { close(descriptor) }
+        let result: Int32
+        if family == AF_INET {
+            var address = sockaddr_in()
+            address.sin_family = sa_family_t(AF_INET)
+            address.sin_port = in_port_t(port).bigEndian
+            address.sin_addr.s_addr = inet_addr("127.0.0.1")
+            result = withUnsafePointer(to: &address) {
+                $0.withMemoryRebound(to: sockaddr.self, capacity: 1) {
+                    connect(descriptor, $0, socklen_t(MemoryLayout<sockaddr_in>.size))
+                }
+            }
+        } else {
+            var address = sockaddr_in6()
+            address.sin6_family = sa_family_t(AF_INET6)
+            address.sin6_port = in_port_t(port).bigEndian
+            address.sin6_addr = in6addr_loopback
+            result = withUnsafePointer(to: &address) {
+                $0.withMemoryRebound(to: sockaddr.self, capacity: 1) {
+                    connect(descriptor, $0, socklen_t(MemoryLayout<sockaddr_in6>.size))
+                }
+            }
+        }
+        return result == 0
+    }
 }

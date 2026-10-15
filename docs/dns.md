@@ -5,13 +5,16 @@ For the proxy to serve `https://acme.test`, the name has to point at this Mac. W
 ```sh
 just warren dns install      # download CoreDNS 1.14.7, verify its SHA-256
 just warren dns status       # zones, resolver files, and whether macOS resolves each domain
-just warren dns run          # run the DNS server in the foreground; Ctrl-C stops it
+just warren dns start        # run in the background, now and at every login
+just warren dns stop         # stop it and remove it from login
+just warren dns logs         # the DNS server's log (-f follows it)
+just warren dns run          # run in the foreground for debugging; Ctrl-C stops it
 just warren dns sync         # apply added or removed sites (a running server reloads by itself)
 just warren dns enable       # write the resolver files (shows them, asks, needs your password)
 just warren dns disable      # remove the resolver files Warren wrote
 ```
 
-Use `--port N` to change the DNS port (default 5354).
+Use `--port N` to change the DNS port (default 5354). `start` remembers it. Adding or removing a site updates a running DNS server by itself. `start` installs a launch agent (`dev.warren.dns`) the same way the proxy does.
 
 ## Which domains need what
 
@@ -41,7 +44,7 @@ Use `--port N` to change the DNS port (default 5354).
 ```sh
 just warren site add ~/Sites/acme          # with domains = ["acme.test"] and [run] port in .warren.toml
 just warren dns install
-just warren dns run                        # leave running
+just warren dns start
 # in a second terminal:
 just warren dns enable                     # asks for your admin password
 just warren dns status                     # acme.test -> resolves to this Mac

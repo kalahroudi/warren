@@ -9,7 +9,8 @@ struct ServicesView: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 18) {
             PageHeader(title: "Services",
-                       subtitle: "One-click databases and the usual suspects. Data lives in ~/Warren/data.")
+                       subtitle: "One-click databases and the usual suspects. Data lives in ~/Warren/data.",
+                       preview: model.snapshot.previewSections.contains("Services"))
             LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 14), count: 3), spacing: 14) {
                 ForEach(model.snapshot.services) { service in
                     Card {

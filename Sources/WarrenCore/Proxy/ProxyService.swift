@@ -46,16 +46,32 @@ public struct ProxyService: Sendable {
         for port in [ports.http, ports.https] where !PortCheck.isFree(port) {
             throw ProxyError.portInUse(port: port, holder: PortCheck.holder(of: port))
         }
-        let environment = [
-            "XDG_DATA_HOME": paths.dataDirectory.path,
-            "XDG_CONFIG_HOME": paths.configDirectory.path,
-        ]
-        return ProxyLaunch(
-            binary: binary,
-            arguments: ["run", "--config", paths.caddyConfigFile.path],
+        return ProxyLaunch(binary: binary, arguments: runArguments, environment: environment, plan: plan)
+    }
+
+    /// The same command as `prepareRun`, described as a launchd job. Writes the config first.
+    public func launchAgent(ports: ProxyPorts, logFile: URL) throws -> LaunchAgent {
+        let binary = try installedBinary()
+        _ = try writeConfig(ports: ports)
+        return LaunchAgent(
+            kind: .proxy,
+            program: binary,
+            arguments: runArguments,
             environment: environment,
-            plan: plan
+            logFile: logFile
         )
+    }
+
+    public var isInstalled: Bool {
+        installer.isInstalled(release)
+    }
+
+    private var runArguments: [String] {
+        ["run", "--config", paths.caddyConfigFile.path]
+    }
+
+    private var environment: [String: String] {
+        ["XDG_DATA_HOME": paths.dataDirectory.path, "XDG_CONFIG_HOME": paths.configDirectory.path]
     }
 
     /// Regenerates the config from the registry and applies it to the running proxy without a restart.

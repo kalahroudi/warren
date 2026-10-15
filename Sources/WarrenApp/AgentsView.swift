@@ -10,7 +10,8 @@ struct AgentsView: View {
         let agents = model.snapshot.agents
         return VStack(alignment: .leading, spacing: 18) {
             PageHeader(title: "Agents",
-                       subtitle: "Warren speaks MCP, so Claude Code, Cursor and friends can run your local stack.")
+                       subtitle: "Warren speaks MCP, so Claude Code, Cursor and friends can run your local stack.",
+                       preview: model.snapshot.previewSections.contains("Agents"))
             HStack(alignment: .top, spacing: 14) {
                 Card {
                     VStack(alignment: .leading, spacing: 10) {

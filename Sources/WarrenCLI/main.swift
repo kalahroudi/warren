@@ -47,6 +47,7 @@ func runSite(_ arguments: [String], registry: SiteRegistry) throws {
     case let ("add", path?):
         let site = try registry.add(path: path)
         describe(site)
+        syncRunningNetwork(paths: registry.paths)
     case ("list", nil):
         let sites = try registry.list()
         if json {
@@ -66,6 +67,7 @@ func runSite(_ arguments: [String], registry: SiteRegistry) throws {
     case let ("remove", id?):
         try registry.remove(id: id)
         print("removed \(id)")
+        syncRunningNetwork(paths: registry.paths)
     default:
         fail("unknown or incomplete command\n\n\(usage)")
     }

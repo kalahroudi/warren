@@ -9,7 +9,8 @@ struct RuntimesView: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 18) {
             PageHeader(title: "Runtimes",
-                       subtitle: "Per-site versions, picked up from .nvmrc, .php-version and friends.")
+                       subtitle: "Per-site versions, picked up from .nvmrc, .php-version and friends.",
+                       preview: model.snapshot.previewSections.contains("Runtimes"))
             LazyVGrid(columns: [GridItem(.flexible(), spacing: 14), GridItem(.flexible())], spacing: 14) {
                 ForEach(model.snapshot.runtimeGroups) { group in
                     Card {
