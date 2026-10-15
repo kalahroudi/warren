@@ -1,0 +1,140 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Warren sites</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<style>
+body{margin:0;font-family:-apple-system,"SF Pro Text",system-ui,sans-serif}
+button{font-family:inherit}
+</style>
+</helmet>
+<div style="width:1180px;height:760px;display:flex;background:#15171c;color:#e8eaed;overflow:hidden">
+  <!-- Sidebar -->
+  <div style="width:220px;flex:none;background:#1a1d23;border-right:1px solid rgba(255,255,255,.07);padding:16px 12px;box-sizing:border-box;display:flex;flex-direction:column;gap:2px">
+    <div style="display:flex;gap:8px;padding:0 6px 18px"><span style="width:12px;height:12px;border-radius:50%;background:#ff5f57"></span><span style="width:12px;height:12px;border-radius:50%;background:#febc2e"></span><span style="width:12px;height:12px;border-radius:50%;background:#28c840"></span></div>
+    <div style="display:flex;align-items:center;gap:9px;padding:0 8px 14px">
+      <div style="width:26px;height:26px;border-radius:8px;background:linear-gradient(145deg,#7bf0b8,#2fbf8a);display:flex;align-items:center;justify-content:center"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#06281b" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 21V12a8 8 0 0 1 16 0v9"/><path d="M9 21v-5a3 3 0 0 1 6 0v5"/></svg></div>
+      <span style="font-weight:600;font-size:15px;letter-spacing:-.01em">Warren</span>
+    </div>
+    <sc-for list="{{nav}}" as="n" hint-placeholder-count="6">
+      <a href="{{n.href}}" style="display:flex;align-items:center;gap:10px;padding:8px 10px;border-radius:8px;text-decoration:none;font-size:13.5px;color:{{n.color}};background:{{n.bg}}">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="{{n.icon}}"/></svg>
+        <span style="flex-grow:1">{{n.label}}</span><span style="font-size:11.5px;color:#7d848f">{{n.count}}</span>
+      </a>
+    </sc-for>
+    <div style="flex-grow:1"></div>
+    <div style="padding:10px;border-radius:10px;background:rgba(245,184,75,.1);border:1px solid rgba(245,184,75,.2);font-size:12px;color:#f6c667">Update 0.4.2 ready<div style="color:#b9a77a;margin-top:2px">Restart to apply</div></div>
+  </div>
+
+  <!-- Main -->
+  <div style="flex-grow:1;min-width:0;display:flex;flex-direction:column">
+    <div style="display:flex;align-items:center;justify-content:space-between;padding:20px 28px 14px">
+      <div><h1 style="margin:0;font-size:22px;font-weight:650;letter-spacing:-.02em">Sites</h1><div style="font-size:13px;color:#8f96a1;margin-top:2px">Any folder, any framework, any domain you like.</div></div>
+      <div style="display:flex;gap:8px">
+        <div style="padding:8px 12px;border-radius:8px;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.08);font-size:13px;color:#8f96a1;width:180px">Search sites</div>
+        <button style="padding:8px 14px;border-radius:8px;border:none;background:#5ee6a8;color:#06281b;font-weight:600;font-size:13px;cursor:pointer">+ Add site</button>
+      </div>
+    </div>
+    <div style="display:flex;flex-grow:1;min-height:0;gap:0">
+      <!-- list -->
+      <div style="width:470px;flex:none;padding:0 12px 0 28px;display:flex;flex-direction:column;gap:8px;overflow:hidden">
+        <sc-for list="{{sites}}" as="s" hint-placeholder-count="5">
+          <div style="display:flex;align-items:center;gap:12px;padding:12px 14px;border-radius:12px;background:{{s.bg}};border:1px solid {{s.border}}">
+            <div style="width:34px;height:34px;border-radius:9px;background:{{s.tint}};display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;color:#0d1013">{{s.badge}}</div>
+            <div style="flex-grow:1;min-width:0">
+              <div style="font-size:14px;font-weight:550">{{s.domain}}</div>
+              <div style="font-size:12px;color:#8f96a1">{{s.stack}} · {{s.runtime}}</div>
+            </div>
+            <sc-if value="{{s.relay}}" hint-placeholder-val="{{ true }}"><span style="font-size:10.5px;padding:2px 7px;border-radius:999px;background:rgba(106,169,255,.16);color:#8dbcff;font-weight:500">Relay</span></sc-if>
+            <span style="width:8px;height:8px;border-radius:50%;background:{{s.dot}}"></span>
+          </div>
+        </sc-for>
+      </div>
+
+      <!-- detail -->
+      <div style="flex-grow:1;min-width:0;margin:0 28px 28px 8px;border-radius:16px;background:#1b1e25;border:1px solid rgba(255,255,255,.07);padding:22px 24px;display:flex;flex-direction:column;gap:18px;overflow:hidden">
+        <div style="display:flex;align-items:center;gap:12px">
+          <div style="flex-grow:1"><div style="font-size:19px;font-weight:650;letter-spacing:-.01em">acme.test</div><div style="font-size:12.5px;color:#8f96a1;font-family:ui-monospace,'SF Mono',monospace">~/code/acme-store</div></div>
+          <button style="padding:7px 12px;border-radius:8px;border:1px solid rgba(255,255,255,.12);background:transparent;color:#e8eaed;font-size:13px;cursor:pointer">Open in browser</button>
+          <button style="padding:7px 12px;border-radius:8px;border:none;background:rgba(255,255,255,.1);color:#e8eaed;font-size:13px;cursor:pointer">Stop</button>
+        </div>
+
+        <!-- Domains -->
+        <div style="display:flex;flex-direction:column;gap:10px">
+          <div style="font-size:11px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:#7d848f">Domains</div>
+          <div style="display:flex;align-items:center;gap:10px;padding:11px 14px;border-radius:10px;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.07)">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#5ee6a8" stroke-width="2" stroke-linecap="round" aria-hidden="true"><rect x="3" y="4" width="18" height="12" rx="2"/><path d="M8 20h8M12 16v4"/></svg>
+            <div style="flex-grow:1"><div style="font-size:13.5px;font-weight:500;font-family:ui-monospace,'SF Mono',monospace">https://acme.test</div><div style="font-size:11.5px;color:#8f96a1">Local · trusted cert · → localhost:3000</div></div>
+            <span style="font-size:11px;color:#5ee6a8">Free</span>
+          </div>
+          <div style="display:flex;align-items:center;gap:10px;padding:11px 14px;border-radius:10px;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.07)">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#5ee6a8" stroke-width="2" stroke-linecap="round" aria-hidden="true"><rect x="3" y="4" width="18" height="12" rx="2"/><path d="M8 20h8M12 16v4"/></svg>
+            <div style="flex-grow:1"><div style="font-size:13.5px;font-weight:500;font-family:ui-monospace,'SF Mono',monospace">https://shop.localhost</div><div style="font-size:11.5px;color:#8f96a1">Alias · any name you type</div></div>
+            <span style="font-size:11px;color:#8f96a1">Remove</span>
+          </div>
+          <div style="padding:14px;border-radius:12px;background:linear-gradient(135deg,rgba(106,169,255,.16),rgba(106,169,255,.05));border:1px solid rgba(106,169,255,.3)">
+            <div style="display:flex;align-items:center;gap:10px">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#8dbcff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M17.5 19a4.5 4.5 0 1 0-1-8.9A6 6 0 0 0 4.5 12a3.5 3.5 0 0 0 1 7z"/></svg>
+              <div style="flex-grow:1"><div style="font-size:13.5px;font-weight:600;color:#a9cdff">Relay · share a public URL</div><div style="font-size:12px;color:#9fb4d1">Secure tunnel over Cloudflare. Phones, webhooks, teammates.</div></div>
+              <div style="width:34px;height:20px;border-radius:999px;background:#6aa9ff;position:relative"><div style="position:absolute;top:2px;left:16px;width:16px;height:16px;border-radius:50%;background:#fff"></div></div>
+            </div>
+            <div style="margin-top:12px;display:flex;align-items:center;gap:8px;padding:9px 12px;border-radius:8px;background:rgba(0,0,0,.28);font-family:ui-monospace,'SF Mono',monospace;font-size:13px;color:#d6e6ff">
+              <span style="flex-grow:1">https://acme-store.warren.run</span><span style="font-family:-apple-system,system-ui,sans-serif;font-size:11.5px;color:#8dbcff">Copy</span>
+            </div>
+            <div style="margin-top:10px;display:flex;justify-content:space-between;font-size:11.5px;color:#9fb4d1"><span>Cloudflare · shared domain · Free</span><a href="Share.dc.html" style="color:#8dbcff;text-decoration:none">Change provider</a></div>
+          </div>
+        </div>
+
+        <!-- Config -->
+        <div style="display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px">
+          <div style="padding:11px 12px;border-radius:10px;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.07)"><div style="font-size:11px;color:#7d848f">Framework</div><div style="font-size:13.5px;font-weight:500;margin-top:3px">Next.js 15</div></div>
+          <div style="padding:11px 12px;border-radius:10px;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.07)"><div style="font-size:11px;color:#7d848f">Runtime</div><div style="font-size:13.5px;font-weight:500;margin-top:3px">Node 22.11 (.nvmrc)</div></div>
+          <div style="padding:11px 12px;border-radius:10px;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.07)"><div style="font-size:11px;color:#7d848f">Command</div><div style="font-size:13px;font-weight:500;margin-top:3px;font-family:ui-monospace,'SF Mono',monospace">pnpm dev</div></div>
+        </div>
+
+        <!-- Logs -->
+        <div style="flex-grow:1;min-height:0;border-radius:10px;background:#0f1115;border:1px solid rgba(255,255,255,.06);padding:12px 14px;font-family:ui-monospace,'SF Mono',monospace;font-size:12px;line-height:1.65;color:#9aa1ac;overflow:hidden">
+          <div><span style="color:#5ee6a8">✓</span> Ready in 812ms</div>
+          <div>GET / 200 in 34ms</div>
+          <div>GET /api/products 200 in 12ms</div>
+          <div style="color:#f6c667">⚠ Slow query: orders (212ms)</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1180,"height":760}}'>
+class Component extends DCLogic {
+  renderVals() {
+    const on = '#5ee6a8', off = '#5c636e';
+    const act = (i) => ({ color: i ? '#fff' : '#b5bbc5', bg: i ? 'rgba(255,255,255,.09)' : 'transparent' });
+    const nav = [
+      ['Sites', 'M3 12 12 3l9 9M5 10v10h14V10', '5', 'Sites.dc.html', 1],
+      ['Services', 'M4 6h16M4 12h16M4 18h16', '7', 'Services.dc.html', 0],
+      ['Runtimes', 'M12 3 3 8v8l9 5 9-5V8z', '9', 'Runtimes.dc.html', 0],
+      ['Agents', 'M12 3v4M8 7h8v6H8zM6 21v-4h12v4', 'MCP', 'Agents.dc.html', 0],
+      ['Storage', 'M4 7c0-1.7 3.6-3 8-3s8 1.3 8 3-3.6 3-8 3-8-1.3-8-3zM4 7v10c0 1.7 3.6 3 8 3s8-1.3 8-3V7', '48 GB', 'Storage.dc.html', 0]
+    ].map(([label, icon, count, href, a]) => ({ label, icon, count, href, ...act(a) }));
+    const sel = { bg: 'rgba(94,230,168,.08)', border: 'rgba(94,230,168,.3)' };
+    const idle = { bg: 'rgba(255,255,255,.03)', border: 'rgba(255,255,255,.06)' };
+    return {
+      nav,
+      sites: [
+        { domain: 'acme.test', stack: 'Next.js', runtime: 'Node 22', badge: 'N', tint: '#e8eaed', dot: on, relay: true, ...sel },
+        { domain: 'api.acme.test', stack: 'Hono', runtime: 'Bun 1.2', badge: 'H', tint: '#ff9d57', dot: on, relay: false, ...idle },
+        { domain: 'docs.dev', stack: 'SvelteKit', runtime: 'hibernated · 1.2 GB freed', badge: 'S', tint: '#ff7a59', dot: off, relay: false, ...idle },
+        { domain: 'billing.test', stack: 'Laravel', runtime: 'PHP 8.4', badge: 'L', tint: '#ff6b6b', dot: on, relay: false, ...idle },
+        { domain: 'scraper.local', stack: 'FastAPI', runtime: 'Python 3.13', badge: 'Py', tint: '#7fb2ff', dot: on, relay: false, ...idle }
+      ]
+    };
+  }
+}
+</script>
+</body>
+</html>

@@ -1,0 +1,86 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Warren setup progress</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<style>
+body{margin:0;font-family:-apple-system,"SF Pro Text",system-ui,sans-serif}
+button{font-family:inherit}
+</style>
+</helmet>
+<div style="width:1180px;height:760px;position:relative;background:#15171c;color:#e8eaed;overflow:hidden;display:flex;align-items:center;justify-content:center">
+  <div style="position:absolute;inset:0;background:radial-gradient(800px 500px at 30% 0%,#1e3a44 0%,transparent 65%),#0e1013;opacity:.9"></div>
+  <div style="position:relative;width:960px;height:620px;border-radius:18px;background:#1a1d23;border:1px solid rgba(255,255,255,.1);box-shadow:0 30px 80px rgba(0,0,0,.6);display:flex;flex-direction:column;overflow:hidden">
+    <div style="padding:22px 28px 16px;display:flex;align-items:center;gap:14px">
+      <div style="width:40px;height:40px;border-radius:11px;background:#e8eaed;display:flex;align-items:center;justify-content:center;font-weight:700;color:#0d1013">N</div>
+      <div style="flex-grow:1"><div style="font-size:18px;font-weight:650;letter-spacing:-.01em">Setting up shop-demo.test</div><div style="font-size:12.5px;color:#8f96a1">Next.js 15 · acme/shop-demo · ~/Sites/shop-demo</div></div>
+      <div style="font-size:13px;color:#5ee6a8;font-weight:600">4 of 7</div>
+    </div>
+    <div style="margin:0 28px;height:6px;border-radius:999px;background:rgba(255,255,255,.08)"><div style="width:57%;height:100%;border-radius:999px;background:linear-gradient(90deg,#7bf0b8,#2fbf8a)"></div></div>
+
+    <div style="display:flex;flex-grow:1;min-height:0;padding:20px 28px 0;gap:20px;box-sizing:border-box">
+      <div style="width:340px;flex:none;display:flex;flex-direction:column;gap:6px">
+        <sc-for list="{{steps}}" as="s" hint-placeholder-count="7">
+          <div style="display:flex;align-items:center;gap:10px;padding:9px 11px;border-radius:9px;background:{{s.bg}}">
+            <span style="width:18px;height:18px;border-radius:50%;flex:none;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;background:{{s.dotBg}};color:{{s.dotColor}};border:{{s.dotBorder}}">{{s.mark}}</span>
+            <span style="font-size:13px;flex-grow:1;color:{{s.color}}">{{s.title}}</span>
+            <span style="font-size:11.5px;color:#7d848f">{{s.time}}</span>
+          </div>
+        </sc-for>
+      </div>
+      <div style="flex-grow:1;min-width:0;display:flex;flex-direction:column;gap:8px">
+        <div style="display:flex;justify-content:space-between;font-size:11px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:#7d848f"><span>pnpm install</span><span style="text-transform:none;letter-spacing:0;font-weight:500">Show full log</span></div>
+        <div style="flex-grow:1;border-radius:10px;background:#0f1115;border:1px solid rgba(255,255,255,.06);padding:12px 14px;font-family:ui-monospace,'SF Mono',monospace;font-size:12px;line-height:1.65;color:#9aa1ac;overflow:hidden">
+          <div><span style="color:#5ee6a8">✓</span> git clone acme/shop-demo (1.2s)</div>
+          <div><span style="color:#5ee6a8">✓</span> node 22.11.0 ready (cached)</div>
+          <div>Lockfile found. Resolving…</div>
+          <div>Progress: resolved 842, reused 790, downloaded 38</div>
+          <div>+ next 15.0.3</div>
+          <div>+ react 19.0.0</div>
+          <div>+ drizzle-orm 0.36.4</div>
+          <div style="color:#f6c667">Ignored build scripts: sharp. Approved by you earlier.</div>
+          <div>Progress: resolved 842, reused 812, downloaded 41 <span style="color:#5ee6a8">▍</span></div>
+        </div>
+        <div style="padding:12px 14px;border-radius:10px;background:rgba(245,184,75,.09);border:1px solid rgba(245,184,75,.25);display:flex;align-items:center;gap:12px">
+          <div style="flex-grow:1"><div style="font-size:13px;font-weight:600;color:#f6c667">One value needed: STRIPE_SECRET_KEY</div><div style="font-size:12px;color:#b9a77a">Not in .env.example defaults. Skip to use a placeholder.</div></div>
+          <div style="padding:7px 10px;border-radius:8px;background:rgba(0,0,0,.3);font-family:ui-monospace,'SF Mono',monospace;font-size:12px;color:#8f96a1;width:150px">sk_test_…</div>
+          <button style="padding:7px 12px;border-radius:8px;border:none;background:#f5b84b;color:#2a1c00;font-weight:600;font-size:12.5px;cursor:pointer">Save</button>
+        </div>
+      </div>
+    </div>
+
+    <div style="display:flex;align-items:center;gap:10px;padding:14px 28px 18px;border-top:1px solid rgba(255,255,255,.07);margin-top:18px">
+      <div style="flex-grow:1;font-size:12.5px;color:#8f96a1">You can close this. Setup continues in the menu bar and pings you when it is ready.</div>
+      <button style="padding:8px 14px;border-radius:8px;border:1px solid rgba(255,255,255,.12);background:transparent;color:#e8eaed;font-size:13px;cursor:pointer">Run in background</button>
+      <button style="padding:9px 16px;border-radius:8px;border:none;background:rgba(94,230,168,.25);color:#7fb99e;font-weight:600;font-size:13px">Open https://shop-demo.test</button>
+    </div>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1180,"height":760}}'>
+class Component extends DCLogic {
+  renderVals() {
+    const done = (title, time) => ({ title, time, mark: '✓', bg: 'transparent', dotBg: '#5ee6a8', dotColor: '#06281b', dotBorder: 'none', color: '#d6dae0' });
+    const active = (title, time) => ({ title, time, mark: '●', bg: 'rgba(94,230,168,.09)', dotBg: 'transparent', dotColor: '#5ee6a8', dotBorder: '1.5px solid #5ee6a8', color: '#fff' });
+    const wait = (title) => ({ title, time: '', mark: '', bg: 'transparent', dotBg: 'transparent', dotColor: 'transparent', dotBorder: '1.5px solid #4a505a', color: '#8f96a1' });
+    return {
+      steps: [
+        done('Clone repository', '1.2s'),
+        done('Install Node 22.11', 'cached'),
+        done('Add PostgreSQL 17, database "shop"', '4.8s'),
+        active('Install dependencies', '12s'),
+        wait('Create .env'),
+        wait('Run migrations and seed'),
+        wait('Start dev server and route domain')
+      ]
+    };
+  }
+}
+</script>
+</body>
+</html>
