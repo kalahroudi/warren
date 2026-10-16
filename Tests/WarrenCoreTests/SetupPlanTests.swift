@@ -37,6 +37,13 @@ struct SetupPlanTests {
         return SetupPlanner(paths: paths).plan(for: site, registered: register, inventory: installed)
     }
 
+    @Test func aNodeProjectWithNoPackagesHasNothingToInstall() throws {
+        let bare = try plan(["package.json": #"{"name":"a","scripts":{"dev":"node server.js"}}"#])
+        #expect(step(bare, "dependencies")?.state == .done)
+        let needy = try plan(["package.json": #"{"name":"a","dependencies":{"express":"^4"}}"#])
+        #expect(step(needy, "dependencies")?.state == .todo)
+    }
+
     private func step(_ plan: SetupPlan, _ id: String) -> PlanStep? {
         plan.steps.first { $0.id == id }
     }

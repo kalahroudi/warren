@@ -274,27 +274,10 @@ public struct PlanRunner: Sendable {
 
     // MARK: Environment
 
-    /// The site's runtime environment as the machine is now (earlier steps may have installed runtimes), with pnpm
-    /// and Yarn on `PATH` and settings that keep tools from asking questions.
+    /// The site's runtime environment as the machine is now (earlier steps may have installed runtimes), with settings
+    /// that keep tools from asking questions.
     private func environment(plan: SetupPlan) async -> [String: String] {
-        let inventory = (try? manager.inventory()) ?? []
-        let needs = plan.runtimes.map { planned -> RuntimeNeed in
-            let candidates = inventory.filter { $0.kind == planned.requirement.kind }
-            let version = RuntimeResolver.match(planned.requirement, among: candidates.map(\.version))
-            return RuntimeNeed(
-                requirement: planned.requirement, installedVersion: version,
-                installPath: candidates.first { $0.version == version }?.path
-            )
-        }
-        var environment = manager.environment(
-            for: SiteRuntimePlan(siteID: site.id, needs: needs),
-            base: baseEnvironment
-        )
-        let tools = ((try? manager.installedTools()) ?? []).filter { ["pnpm", "yarn"].contains($0.name) }
-        if !tools.isEmpty {
-            let current = environment["PATH"].map { [$0] } ?? []
-            environment["PATH"] = (tools.map(\.binDirectory.path) + current).joined(separator: ":")
-        }
+        var environment = manager.siteEnvironment(plan: plan, base: baseEnvironment)
         environment.merge([
             "CI": "1", "NO_COLOR": "1", "npm_config_yes": "true", "COMPOSER_NO_INTERACTION": "1",
             "DEBIAN_FRONTEND": "noninteractive",

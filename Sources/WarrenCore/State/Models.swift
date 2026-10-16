@@ -2,8 +2,21 @@
 
 public enum RunState: String, Sendable {
     case running
+    case starting
     case stopped
+    /// Ended on its own, without being stopped.
+    case crashed
     case hibernated
+
+    public var label: String {
+        switch self {
+        case .running: "Running"
+        case .starting: "Starting"
+        case .stopped: "Stopped"
+        case .crashed: "Stopped unexpectedly"
+        case .hibernated: "Hibernated"
+        }
+    }
 }
 
 public struct Site: Identifiable, Hashable, Sendable {
@@ -17,6 +30,9 @@ public struct Site: Identifiable, Hashable, Sendable {
     public let relayURL: String?
     /// How the site is started or served, from framework detection. Empty when unknown.
     public var startLine = ""
+    /// False for a server found running that Warren did not start, which Warren cannot stop.
+    public var managed = true
+    public var exitCode: Int32?
 }
 
 public struct Service: Identifiable, Hashable, Sendable {

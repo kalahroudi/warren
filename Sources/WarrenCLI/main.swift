@@ -12,6 +12,9 @@ usage: warren <command>
   site detect <site or folder> [--json]  what the project is and how it starts
   site plan <site or folder> [--json]  what it takes to run the project
   site setup <id> [--yes]      run the setup plan (asks before running project code)
+  site start|stop|restart <id> start or stop a site (see: warren site start)
+  site status [id] [--json]    which sites are running
+  site logs <id> [-n N] [--follow]  the site's log
   site new <template> <name>   create a project from a template or --blank <kind> (see: warren template list)
   template list [--json]       the starters Warren can create
   site clone <repo> [name]     clone a repository as a site (see: warren site clone)
@@ -148,6 +151,10 @@ func runSite(_ arguments: [String], registry: SiteRegistry) throws {
             describe(detection)
         }
     case let ("remove", id?):
+        if let site = try? registry.show(id: id) {
+            try? SiteProcesses(paths: registry.paths, routesChanged: {}).stop(site)
+            SitePorts(paths: registry.paths).forget(id)
+        }
         try registry.remove(id: id)
         print("removed \(id)")
         syncRunningNetwork(paths: registry.paths)
@@ -180,6 +187,12 @@ case "template":
 case "site" where arguments.dropFirst().first == "new":
     do {
         try await newProject(Array(arguments.dropFirst(2)), paths: .fromEnvironment())
+    } catch {
+        fail(error.localizedDescription)
+    }
+case "site" where ["start", "stop", "restart", "status", "logs"].contains(arguments.dropFirst().first ?? ""):
+    do {
+        try await runSiteProcess(arguments[1], Array(arguments.dropFirst(2)), paths: .fromEnvironment())
     } catch {
         fail(error.localizedDescription)
     }

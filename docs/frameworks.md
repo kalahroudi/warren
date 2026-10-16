@@ -12,7 +12,7 @@ Warren looks at a project folder and says what it is and how it starts in develo
 
 | Framework | Identified by | Starts with |
 |---|---|---|
-| Laravel | `laravel/framework` and `artisan` | PHP-FPM from `public/` |
+| Laravel | `laravel/framework` and `artisan` | PHP-FPM from `public/` (installed with Composer even when a `package.json` is there for assets) |
 | Symfony | `symfony/framework-bundle` | PHP-FPM from `public/` |
 | WordPress | `wp-config.php` or `wp-content` | PHP-FPM from the project folder |
 | Next.js | `next` | the `dev` script, else `next dev` |

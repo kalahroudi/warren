@@ -18,6 +18,14 @@ struct CaddyConfigTests {
         try #require(JSONSerialization.jsonObject(with: Data(plan.configJSON.utf8)) as? [String: Any])
     }
 
+    @Test func aSiteThatIsNotRunningStillGetsACertificateAndAPlainPage() throws {
+        let plan = try CaddyConfig.plan(
+            sites: [site("c", domains: ["c.test"], port: nil)], ports: ProxyPorts(), paths: paths
+        )
+        #expect(plan.configJSON.contains(CaddyConfig.notRunningBody))
+        #expect(plan.configJSON.contains("\"c.test\""))
+    }
+
     @Test func routesSitesWithAPortAndReportsTheRest() throws {
         let plan = try CaddyConfig.plan(
             sites: [
@@ -29,7 +37,11 @@ struct CaddyConfigTests {
         )
         #expect(plan.routes.map(\.siteID) == ["a", "b"])
         #expect(plan.routes[0].domains == ["a.test", "alias.test"])
-        #expect(plan.skipped == [ProxySkippedSite(siteID: "c", reason: "no run.port in .warren.toml")])
+        #expect(plan.skipped == [ProxySkippedSite(
+            siteID: "c",
+            domains: ["c.test"],
+            reason: "no run.port in .warren.toml"
+        )])
     }
 
     @Test func outputIsStable() throws {

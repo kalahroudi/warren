@@ -24,6 +24,10 @@ public enum FrameworkDetector {
             result.portHandling = rule.port
             result.documentRoot = rule.documentRoot(files)
             result.notes = rule.notes
+            // A PHP framework with a package.json (for its assets) is still installed with Composer.
+            if rule.kind == .php, files.exists("composer.json") {
+                result.packageManager = .composer
+            }
             if let (text, source) = rule.command(files, manager) {
                 result.command = text
                 result.commandSource = source

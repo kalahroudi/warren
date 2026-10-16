@@ -5,10 +5,12 @@ import WarrenCore
 
 struct StatusDot: View {
     let running: Bool
+    /// A site that stopped on its own.
+    var warning = false
 
     var body: some View {
         Circle()
-            .fill(Color.status(running: running))
+            .fill(warning ? Color.orange : Color.status(running: running))
             .frame(width: 8, height: 8)
     }
 }

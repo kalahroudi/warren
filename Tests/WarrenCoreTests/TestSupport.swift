@@ -9,6 +9,7 @@ final class FakeLaunch: LaunchControlling, @unchecked Sendable {
     private let lock = NSLock()
     private var loadedLabels: Set<String> = []
     private var recorded: [String] = []
+    private var infos: [String: JobInfo] = [:]
 
     var calls: [String] {
         lock.withLock { recorded }
@@ -18,11 +19,23 @@ final class FakeLaunch: LaunchControlling, @unchecked Sendable {
         _ = lock.withLock { loadedLabels.insert(label) }
     }
 
+    /// What `info` reports for a loaded job; running by default.
+    func setInfo(_ label: String, _ info: JobInfo) {
+        lock.withLock { infos[label] = info }
+    }
+
     func bootstrap(plist: URL) throws {
+        let data = try? Data(contentsOf: plist)
+        let dictionary = data
+            .flatMap { try? PropertyListSerialization.propertyList(from: $0, format: nil) } as? [String: Any]
         lock.withLock {
             recorded.append("bootstrap \(plist.lastPathComponent)")
-            loadedLabels.insert(plist.deletingPathExtension().lastPathComponent)
+            loadedLabels.insert(dictionary?["Label"] as? String ?? plist.deletingPathExtension().lastPathComponent)
         }
+    }
+
+    func info(label: String) -> JobInfo? {
+        lock.withLock { loadedLabels.contains(label) ? infos[label] ?? JobInfo(running: true) : nil }
     }
 
     func bootout(label: String) throws {
@@ -52,7 +65,7 @@ func listeningSocket() throws -> (descriptor: Int32, port: Int) {
             socklen_t(MemoryLayout<sockaddr_in>.size)
         ) }
     }
-    guard bound == 0, listen(descriptor, 1) == 0 else {
+    guard bound == 0, listen(descriptor, 128) == 0 else {
         close(descriptor)
         throw POSIXError(.EADDRINUSE)
     }

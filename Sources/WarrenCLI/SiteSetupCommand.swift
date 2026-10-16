@@ -60,7 +60,7 @@ func execute(_ plan: SetupPlan, site: ResolvedSite, paths: WarrenPaths, assumeYe
 }
 
 /// Asks `[y/N]` for each command that runs project code, unless `--yes` was given.
-private func askForApproval(_ steps: [PlanStep], assumeYes: Bool) -> PlanApproval {
+func askForApproval(_ steps: [PlanStep], assumeYes: Bool) -> PlanApproval {
     if assumeYes {
         return .all(steps)
     }

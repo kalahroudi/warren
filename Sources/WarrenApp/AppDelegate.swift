@@ -21,7 +21,16 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSPopoverDelegate {
         self?.model.refresh()
     }
 
-    private lazy var windows = WindowManager(model: model, setup: setup, runtimes: runtimes, setupRun: setupRun)
+    private lazy var siteRun = SiteRunModel(
+        paths: .fromEnvironment(),
+        enabled: ProcessInfo.processInfo.environment["WARREN_DEMO"] != "1",
+        needsWindow: { [weak self] id in self?.showSite(id) },
+        onChange: { [weak self] in self?.model.refresh() }
+    )
+
+    private lazy var windows = WindowManager(
+        model: model, setup: setup, runtimes: runtimes, setupRun: setupRun, siteRun: siteRun
+    )
     private var item: NSStatusItem!
     private let popover = NSPopover()
 
@@ -43,6 +52,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSPopoverDelegate {
         }
         let view = PopoverView(
             model: model,
+            siteRun: siteRun,
             openMain: { [weak self] in self?.open { $0.openMain() } },
             openSetup: { [weak self] in self?.open { $0.openSetup() } },
             close: { [weak self] in self?.popover.performClose(nil) }
@@ -55,14 +65,21 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSPopoverDelegate {
         popover.delegate = self
 
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.6) { [weak self] in
-            // WARREN_OPEN=main|add|setup opens that window at launch, for demos and tests.
+            // WARREN_OPEN=main|add|setup|popover opens that window at launch, for demos and tests.
             switch ProcessInfo.processInfo.environment["WARREN_OPEN"] {
             case "main": self?.windows.openMain()
             case "add": self?.windows.openAddSite()
             case "setup": self?.windows.openSetup()
+            case "popover": self?.togglePopover()
             default: self?.openSetupIfNeeded()
             }
         }
+    }
+
+    private func showSite(_ id: String) {
+        model.selectedSiteID = id
+        model.section = .sites
+        windows.openMain()
     }
 
     /// On first launch, and until the user closes it unfinished, the wizard opens by itself.

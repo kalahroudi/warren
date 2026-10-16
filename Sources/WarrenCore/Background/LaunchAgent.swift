@@ -43,6 +43,8 @@ public protocol LaunchControlling: Sendable {
     func bootstrap(plist: URL) throws
     func bootout(label: String) throws
     func isLoaded(label: String) -> Bool
+    /// The job's state, or nil if it is not loaded.
+    func info(label: String) -> JobInfo?
 }
 
 public struct LaunchCtl: LaunchControlling {
@@ -63,7 +65,13 @@ public struct LaunchCtl: LaunchControlling {
     }
 
     public func isLoaded(label: String) -> Bool {
-        ((try? Shell.run("/bin/launchctl", ["print", "\(domain)/\(label)"]))?.status ?? 1) == 0
+        info(label: label) != nil
+    }
+
+    public func info(label: String) -> JobInfo? {
+        guard let result = try? Shell.run("/bin/launchctl", ["print", "\(domain)/\(label)"]),
+              result.status == 0 else { return nil }
+        return JobInfo.parse(result.output)
     }
 }
 

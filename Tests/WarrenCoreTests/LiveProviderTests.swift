@@ -102,7 +102,7 @@ struct LiveProviderTests {
 
     @Test func controlsThatDoNothingYetAreOff() {
         let capabilities = provider.snapshot().capabilities
-        #expect(!capabilities.canControlSites)
+        #expect(capabilities.canControlSites)
         #expect(!capabilities.canPause)
     }
 
