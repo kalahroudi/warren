@@ -65,11 +65,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSPopoverDelegate {
         popover.delegate = self
 
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.6) { [weak self] in
-            // WARREN_OPEN=main|add|setup opens that window at launch, for demos and tests.
+            // WARREN_OPEN=main|add|setup|popover opens that window at launch, for demos and tests.
             switch ProcessInfo.processInfo.environment["WARREN_OPEN"] {
             case "main": self?.windows.openMain()
             case "add": self?.windows.openAddSite()
             case "setup": self?.windows.openSetup()
+            case "popover": self?.togglePopover()
             default: self?.openSetupIfNeeded()
             }
         }

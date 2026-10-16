@@ -38,6 +38,7 @@ public struct ProxyRoute: Equatable, Sendable {
 
 public struct ProxySkippedSite: Equatable, Sendable {
     public let siteID: String
+    public let domains: [String]
     public let reason: String
 }
 
@@ -103,6 +104,7 @@ public enum CaddyConfig {
     /// Warren's own check page. The setup wizard loads it to prove DNS, the certificate and the proxy all work.
     public static let selfCheckDomain = "warren.test"
     public static let selfCheckBody = "Warren is working"
+    public static let notRunningBody = "Warren: this site is not running. Start it from Warren's menu bar item."
 
     /// Names users cannot claim for a site.
     public static let reservedDomains: Set = [selfCheckDomain]
@@ -120,10 +122,14 @@ public enum CaddyConfig {
         for site in sites.sorted(by: { $0.id < $1.id }) {
             switch SiteServing.target(for: site, paths: paths) {
             case let .success(target): routes.append(ProxyRoute(siteID: site.id, domains: site.domains, target: target))
-            case let .failure(reason): skipped.append(ProxySkippedSite(siteID: site.id, reason: reason.text))
+            case let .failure(reason): skipped.append(ProxySkippedSite(
+                    siteID: site.id,
+                    domains: site.domains,
+                    reason: reason.text
+                ))
             }
         }
-        let json = try render(routes: routes, ports: ports, paths: paths, socket: socket)
+        let json = try render(routes: routes, stopped: skipped, ports: ports, paths: paths, socket: socket)
         return ProxyPlan(routes: routes, skipped: skipped, configJSON: json)
     }
 
@@ -163,8 +169,8 @@ public enum CaddyConfig {
         }
     }
 
-    private static func render(routes: [ProxyRoute], ports: ProxyPorts, paths: WarrenPaths,
-                               socket: URL) throws -> String
+    private static func render(routes: [ProxyRoute], stopped: [ProxySkippedSite], ports: ProxyPorts,
+                               paths: WarrenPaths, socket: URL) throws -> String
     {
         let localOnly: [String: Any] = ["remote_ip": ["ranges": loopback]]
         let selfCheck: [String: Any] = [
@@ -179,6 +185,14 @@ public enum CaddyConfig {
                 "terminal": true,
             ]
         }
+        // A site that is not running still gets its certificate and a plain page, instead of a browser error.
+        httpRoutes += stopped.filter { !$0.domains.isEmpty }.map { site in
+            [
+                "match": [["host": site.domains, "remote_ip": ["ranges": loopback]]],
+                "handle": [["handler": "static_response", "status_code": 503, "body": notRunningBody]],
+                "terminal": true,
+            ]
+        }
         httpRoutes.append([
             "match": [["not": [localOnly]]],
             "handle": [["handler": "static_response", "status_code": 403, "body": "Warren: local access only"]],
@@ -189,7 +203,7 @@ public enum CaddyConfig {
             "terminal": true,
         ])
 
-        let domains = [selfCheckDomain] + routes.flatMap(\.domains)
+        let domains = [selfCheckDomain] + routes.flatMap(\.domains) + stopped.flatMap(\.domains)
         var apps: [String: Any] = [
             "http": [
                 "http_port": ports.http,

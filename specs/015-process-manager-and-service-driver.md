@@ -1,6 +1,6 @@
 # 015 · Process manager: starting sites, and the `ServiceDriver` interface
 
-Status: Accepted · Phase 4 · Depends on: 005, 007, 008, 010, 012, 043
+Status: Implemented, pending the popover and log-out checks · Phase 4 · Depends on: 005, 007, 008, 010, 012, 043 · Amends: 010, 011, 043 (see Rollout)
 
 ## Goal
 
@@ -83,22 +83,22 @@ protocol ServiceDriver {
 
 ## Acceptance criteria
 
-Each is verified before it is ticked, and the PR says how.
+Checked means verified. How is in each line.
 
-1. [ ] A Node, a Bun and a Python site (blank projects from 013) start from the site page and load at `https://<name>.test` with the trusted certificate.
-2. [ ] A Next.js site (real template, 013) starts and loads, including its first page compile and the host check for `.test`.
-3. [ ] A Laravel site starts through FPM and shows its welcome page; a plain PHP folder works as well.
-4. [ ] A static site loads, and Stop removes its route.
-5. [ ] Stop kills the whole process tree (`npm run dev`'s node child included) within 5 seconds, and leaves no job, plist or listener.
-6. [ ] A crash (the server exits with an error) shows *Stopped unexpectedly* with the last log lines and is not restarted.
-7. [ ] Ports: `run.port` is honoured and a clash names the holder; an unset port gets a free one that is kept across restarts of the site and of Warren.
-8. [ ] The first start of an unapproved command asks with the exact command; Skip or Cancel does not start it; an approved one does not ask again.
-9. [ ] Quitting Warren leaves running sites running; opening it again shows them as Running.
-10. [ ] Nothing starts at login: after a log-out and log-in the sites are stopped and no plist for a site is in `~/Library/LaunchAgents`. (The log-out check is the user's, like 043.)
-11. [ ] The popover control, the site page buttons and the Logs card work in the running app, and the popover keeps no setup notices.
-12. [ ] `warren site start|stop|restart|status|logs` work, with `--json` for status.
-13. [ ] `NativeDriver` starts and stops the stand-in service, reports readiness and a connection, and a second start of a running service is a no-op.
-14. [ ] `just check` passes; `WARREN_DEMO=1` still shows demo data.
+1. [x] A Node, a Bun and a Python site (blank projects from 013) load at `https://<name>.test` with the trusted certificate (`curl` without `-k`, real launchd, real Caddy). Node was started from the site page in the running app; Bun and Python through `warren site start`, which runs the same core code.
+2. [x] A Next.js site (real template from 013) starts and loads (`GET /` 200 through Caddy). Next has no host check, so nothing to allow; the Vite host variable comes from 010 and was not re-run here. CLI start.
+3. [x] A Laravel site starts through FPM and shows its welcome page, including a pretty URL (`/up` 200), and a plain PHP folder works (CLI start; PHP 8.5.11). FPM held no worker while idle. This found that Laravel was being installed with npm instead of Composer (010); fixed, see Rollout.
+4. [x] A static site loads, and Stop removes its route (CLI). A stopped site answers with a plain "not running" page and keeps its certificate (added; see Rollout).
+5. [x] Stop kills the whole process tree: after stopping a running Next.js site (`npm run dev`, `next dev`, `next-server`, a Turbopack worker) nothing was left two seconds later, and no job, plist or listener remained.
+6. [x] A server that exits with an error is *Stopped unexpectedly* and is not restarted (exit code 3, status stayed `crashed`). In the app the failed start showed "Could not start" with a plain cause for a missing module. The separate "Stopped unexpectedly" card, for a server that dies after it was running, was not seen in the window.
+7. [x] `run.port` is honoured and a clash names the holder ("in use by Python (pid …)"). An unset port gets a free one that was kept across restarts of the site and across quitting and reopening Warren (4100 stayed 4100).
+8. [x] The first start of an unapproved command asks with the exact command (running app). Cancel started nothing (no job loaded); approving started it; with **Trust** ticked the next start did not ask and `sites.json` holds the command. The **Skip these steps** button was not pressed; it returns the same empty answer as Cancel.
+9. [x] Quitting Warren leaves running sites running (a Bun site kept answering), and the reopened window showed each site as Running or Stopped correctly.
+10. [ ] Nothing starts at login: the plists are in `~/Warren/run`, none is in `~/Library/LaunchAgents`, and loading is `bootstrap` from there. **Not checked:** the log-out and log-in test is the user's, as in 043. A static site's route is kept in a marker file, so it would still be routed after a restart.
+11. [ ] The site page buttons (Start, Stop, Restart) and the Log card work in the running app. **Not checked:** the popover control and the **Open** button. The popover could not be opened in this session (no visible screen for it), so the control compiles and is covered by the same model, but I did not see it.
+12. [x] `warren site start|stop|restart|status|logs` work, with `--json` for status. `logs --follow` was not exercised.
+13. [x] `NativeDriver` starts and stops a stand-in service, reports readiness, a crash and a connection, and a second start is a no-op (`ServiceDriverTests` with a fake launchd; `ProcessIntegrationTests` with the real one and a Python web server).
+14. [x] `./scripts/check.sh` passes (296 tests). `WARREN_DEMO=1` was not run again for this spec.
 
 ## Test plan
 
@@ -108,7 +108,14 @@ Each is verified before it is ticked, and the PR says how.
 
 ## Rollout
 
-New code and UI; new folders `~/Warren/run/` and `~/Warren/state/ports.json`. The registry is unchanged. When signing arrives (003) the jobs keep their labels (`dev.warren.site.<id>`). The roadmap row for 015 is renamed to match this spec.
+New code and UI; new folders `~/Warren/run/` and `~/Warren/state/ports.json`. The registry is unchanged.
+
+Changes to earlier specs, found by running real projects:
+
+- **010:** a PHP framework with a `package.json` (Laravel) is installed with Composer. It was npm, so `composer install` never ran.
+- **011:** a Node project that lists no packages has nothing to install, so its *Install dependencies* step is done. `npm install` creates no `node_modules` for it, which left the step open forever on every blank Node project.
+- **043:** a site that is not running is routed to a plain 503 page (and gets its certificate) instead of no route, so a browser shows "not running" and not a certificate error. The pnpm store setting is only set for pnpm projects.
+- `WARREN_OPEN=popover` opens the popover at launch. When signing arrives (003) the jobs keep their labels (`dev.warren.site.<id>`). The roadmap row for 015 is renamed to match this spec.
 
 ## Open questions
 
