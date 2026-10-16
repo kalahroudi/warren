@@ -9,14 +9,16 @@ final class WindowManager: NSObject, NSWindowDelegate {
     private let model: AppModel
     private let setup: SetupModel
     private let runtimes: RuntimesModel
+    private let setupRun: SetupRunModel
     private var mainWindow: NSWindow?
     private var setupWindow: NSWindow?
     private var addSiteWindow: NSWindow?
 
-    init(model: AppModel, setup: SetupModel, runtimes: RuntimesModel) {
+    init(model: AppModel, setup: SetupModel, runtimes: RuntimesModel, setupRun: SetupRunModel) {
         self.model = model
         self.setup = setup
         self.runtimes = runtimes
+        self.setupRun = setupRun
     }
 
     func openMain() {
@@ -31,6 +33,7 @@ final class WindowManager: NSObject, NSWindowDelegate {
             window.contentViewController = NSHostingController(rootView: MainWindowView(
                 model: model,
                 runtimes: runtimes,
+                setupRun: setupRun,
                 addSite: { [weak self] in self?.openAddSite() }
             ))
             window.setContentSize(NSSize(width: 1100, height: 720))
@@ -65,7 +68,7 @@ final class WindowManager: NSObject, NSWindowDelegate {
     /// A fresh window each time, so it never shows a previous folder.
     func openAddSite() {
         addSiteWindow?.close()
-        let model = AddSiteModel(paths: .fromEnvironment()) { [weak self] site in
+        let model = AddSiteModel(paths: .fromEnvironment()) { [weak self] site, runSetup in
             guard let self else { return }
             addSiteWindow?.close()
             self.model.refresh()
@@ -73,7 +76,12 @@ final class WindowManager: NSObject, NSWindowDelegate {
             self.model.selectedSiteID = site.id
             runtimes.reload()
             // One turn later, so the Add site window has finished closing before the main window is ordered in.
-            DispatchQueue.main.async { self.openMain() }
+            DispatchQueue.main.async {
+                self.openMain()
+                if runSetup {
+                    self.setupRun.start(siteID: site.id)
+                }
+            }
         }
         let view = AddSiteView(model: model) { [weak self] in self?.addSiteWindow?.close() }
         let window = NSWindow(

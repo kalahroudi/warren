@@ -48,6 +48,16 @@ public struct WarrenPaths: Sendable {
 }
 
 public extension WarrenPaths {
+    /// Steps that cannot be checked from files (migrations), remembered after a successful run.
+    var setupRunsFile: URL {
+        configDirectory.appendingPathComponent("setup-runs.json")
+    }
+
+    /// One log per setup step, replaced by the next run of that step.
+    var setupLogsDirectory: URL {
+        root.appendingPathComponent("logs/setup", isDirectory: true)
+    }
+
     /// Everything that can be downloaded again. Safe to delete.
     var cacheDirectory: URL {
         root.appendingPathComponent("cache", isDirectory: true)
