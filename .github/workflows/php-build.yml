@@ -27,6 +27,8 @@ jobs:
           || '[{"php":"8.4","runner":"macos-15","arch":"aarch64","spc":"acf2f25d56d0cbf8e65aa82e5054fef555f7be7c5c38046c6e0819f266d83225"}]') }}
     runs-on: ${{ matrix.runner }}
     timeout-minutes: 90
+    env:
+      GITHUB_TOKEN: ${{ github.token }}
     permissions:
       contents: write
     steps:
@@ -46,7 +48,7 @@ jobs:
         run: ./spc download --for-extensions="$EXTENSIONS" --with-php=${{ matrix.php }} --prefer-pre-built --retry=3
 
       - name: Build
-        run: ./spc build "$EXTENSIONS" --build-cli --build-fpm --enable-zts=false 2>/dev/null || ./spc build "$EXTENSIONS" --build-cli --build-fpm
+        run: ./spc build "$EXTENSIONS" --build-cli --build-fpm
 
       - name: Check and package
         id: package
