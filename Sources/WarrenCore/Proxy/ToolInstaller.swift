@@ -79,7 +79,8 @@ public struct ToolInstaller: Sendable {
         return hasher.finalize().map { String(format: "%02x", $0) }.joined()
     }
 
-    private func download(_ url: URL) async throws -> URL {
+    /// Downloads to a temporary file the caller removes. Cancelling the task cancels the download.
+    func download(_ url: URL) async throws -> URL {
         do {
             let (temporary, response) = try await URLSession.shared.download(from: url)
             if let http = response as? HTTPURLResponse, http.statusCode != 200 {

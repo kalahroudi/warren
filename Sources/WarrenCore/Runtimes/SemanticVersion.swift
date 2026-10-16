@@ -71,6 +71,24 @@ struct VersionRange: Sendable {
         self.alternatives = alternatives
     }
 
+    /// Composer's constraint syntax: `^8.2`, `>=8.1,<8.4`, `8.2.*`, `~8.2`, `8.1 | 8.3`. Comma and space both mean
+    /// "and". `~8.2` allows any 8.x from 8.2 on, which is npm's `^8.2`; `~8.2.1` matches npm's `~`.
+    init?(composer text: String) {
+        let normalized = text
+            .replacingOccurrences(of: "||", with: "\u{1}")
+            .replacingOccurrences(of: "|", with: "\u{1}")
+            .replacingOccurrences(of: ",", with: " ")
+            .replacingOccurrences(of: "\u{1}", with: " || ")
+        let rewritten = normalized.components(separatedBy: " || ").map { alternative in
+            alternative.split(whereSeparator: \.isWhitespace).map { token -> String in
+                let body = token.dropFirst()
+                let isTwoPartTilde = token.hasPrefix("~") && body.split(separator: ".").count == 2
+                return isTwoPartTilde ? "^" + body : String(token)
+            }.joined(separator: " ")
+        }.joined(separator: " || ")
+        self.init(rewritten)
+    }
+
     func contains(_ version: SemanticVersion) -> Bool {
         alternatives.contains { $0.allSatisfy { $0.contains(version) } }
     }

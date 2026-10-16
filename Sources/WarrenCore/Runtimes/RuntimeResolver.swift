@@ -3,7 +3,8 @@
 import Foundation
 
 /// Works out which runtime versions a site asks for, and which installed version satisfies each.
-/// Order: `[runtime]` in `.warren.toml`, then the project's version files, then `engines.node`.
+/// Order: `[runtime]` in `.warren.toml`, then the project's version files, then `engines.node` (Node) or
+/// `composer.json` (PHP).
 public enum RuntimeResolver {
     public static func requirements(for site: ResolvedSite) -> [RuntimeRequirement] {
         let directory = URL(fileURLWithPath: site.path, isDirectory: true)
@@ -18,6 +19,9 @@ public enum RuntimeResolver {
         }
         if found[.node] == nil, let range = enginesNode(in: directory) {
             found[.node] = RuntimeRequirement(kind: .node, requested: range, source: .engines)
+        }
+        if found[.php] == nil, let range = composerPHP(in: directory) {
+            found[.php] = RuntimeRequirement(kind: .php, requested: range, source: .composer)
         }
         return RuntimeKind.allCases.compactMap { found[$0] }
     }
@@ -57,6 +61,19 @@ public enum RuntimeResolver {
         return node.trimmingCharacters(in: .whitespaces)
     }
 
+    /// The PHP version `composer.json` asks for. `config.platform.php` is the target Composer resolves against, so
+    /// it wins over `require.php`.
+    static func composerPHP(in directory: URL) -> String? {
+        guard let data = try? Data(contentsOf: directory.appendingPathComponent("composer.json")),
+              let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any] else { return nil }
+        let platform = ((json["config"] as? [String: Any])?["platform"] as? [String: Any])?["php"] as? String
+        let required = (json["require"] as? [String: Any])?["php"] as? String
+        for candidate in [platform, required].compactMap(\.self) where VersionRange(composer: candidate) != nil {
+            return candidate.trimmingCharacters(in: .whitespaces)
+        }
+        return nil
+    }
+
     /// Turns what version files write into what mise understands: `v22.1.0` to `22.1.0`, `lts/iron` to `lts-iron`.
     static func normalize(_ text: String) -> String? {
         var value = text.trimmingCharacters(in: .whitespacesAndNewlines)
@@ -88,8 +105,8 @@ public enum RuntimeResolver {
         let versions = installed.compactMap { text in SemanticVersion(text).map { (text, $0) } }
         let matching: [(String, SemanticVersion)]
         switch requirement.source {
-        case .engines:
-            guard let range = VersionRange(requirement.requested) else { return nil }
+        case .engines, .composer:
+            guard let range = requirement.range else { return nil }
             matching = versions.filter { range.contains($0.1) }
         default:
             let wanted = requirement.requested
@@ -105,11 +122,11 @@ public enum RuntimeResolver {
     /// The version to install for a requirement. Plain requests go to mise as written. A range is resolved against
     /// the releases that exist: the newest that satisfies it, preferring long-term-support lines (even majors).
     public static func versionToInstall(for requirement: RuntimeRequirement, available: [String]) -> String? {
-        guard requirement.source == .engines else { return requirement.requested }
-        guard let range = VersionRange(requirement.requested) else { return nil }
+        guard let range = requirement.range else { return requirement.requested }
         let candidates = available.compactMap { text in SemanticVersion(text).map { (text, $0) } }
             .filter { range.contains($0.1) }
-        let longTerm = candidates.filter { $0.1.major.isMultiple(of: 2) }
+        // Node's long-term-support lines are the even majors. PHP has no such split.
+        let longTerm = requirement.kind == .node ? candidates.filter { $0.1.major.isMultiple(of: 2) } : []
         return (longTerm.isEmpty ? candidates : longTerm).max { $0.1 < $1.1 }?.0
     }
 }
