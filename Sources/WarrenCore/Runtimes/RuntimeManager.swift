@@ -27,18 +27,23 @@ public struct SiteRuntimePlan: Equatable, Sendable {
 public struct RuntimeManager: Sendable {
     public let paths: WarrenPaths
     public let mise: MiseTool
+    public let php: PHPTool
 
-    public init(paths: WarrenPaths, mise: MiseTool? = nil) {
+    public init(paths: WarrenPaths, mise: MiseTool? = nil, php: PHPTool? = nil) {
         self.paths = paths
         self.mise = mise ?? MiseTool(paths: paths)
+        self.php = php ?? PHPTool(paths: paths)
     }
 
     public func inventory() throws -> [InstalledRuntime] {
-        try mise.installed()
+        try mise.installed() + php.installed()
     }
 
     /// Stable releases, newest last.
     public func available(_ kind: RuntimeKind) async throws -> [String] {
+        if kind == .php {
+            return php.available()
+        }
         try await mise.ensureInstalled()
         return try mise.availableVersions(kind)
     }
@@ -60,7 +65,11 @@ public struct RuntimeManager: Sendable {
         version: String,
         onProgress: @escaping @Sendable (String) -> Void = { _ in }
     ) async throws {
-        try await mise.install(kind, version: version, onProgress: onProgress)
+        if kind == .php {
+            try await php.install(version: version, onProgress: onProgress)
+        } else {
+            try await mise.install(kind, version: version, onProgress: onProgress)
+        }
     }
 
     /// Installs what a requirement asks for, resolving ranges against the releases that exist.
@@ -68,18 +77,22 @@ public struct RuntimeManager: Sendable {
         async throws
     {
         var version = requirement.requested
-        if requirement.source == .engines {
+        if requirement.range != nil {
             let releases = try await available(requirement.kind)
             guard let chosen = RuntimeResolver.versionToInstall(for: requirement, available: releases) else {
                 throw RuntimeError.noSuchVersion(requirement.label)
             }
             version = chosen
         }
-        try await mise.install(requirement.kind, version: version, onProgress: onProgress)
+        try await install(requirement.kind, version: version, onProgress: onProgress)
     }
 
     public func remove(_ runtime: InstalledRuntime) throws {
-        try mise.uninstall(runtime)
+        if runtime.kind == .php {
+            try php.uninstall(runtime)
+        } else {
+            try mise.uninstall(runtime)
+        }
     }
 
     public func plan(for site: ResolvedSite, installed: [InstalledRuntime]) -> SiteRuntimePlan {
@@ -105,7 +118,14 @@ public struct RuntimeManager: Sendable {
         base: [String: String] = ProcessInfo.processInfo.environment
     ) -> [String: String] {
         var environment = base
-        let binaries = plan.needs.compactMap { $0.installPath?.appendingPathComponent("bin").path }
+        var binaries = plan.needs.compactMap { $0.installPath?.appendingPathComponent("bin").path }
+        if let need = plan.needs.first(where: { $0.requirement.kind == .php }), let path = need.installPath,
+           let version = need.installedVersion
+        {
+            let runtime = InstalledRuntime(kind: .php, version: version, path: path, bytes: 0)
+            environment.merge(php.environment(for: runtime)) { _, new in new }
+            binaries += [php.composerBin?.path].compactMap(\.self)
+        }
         if !binaries.isEmpty {
             environment["PATH"] = (binaries + [base["PATH"]].compactMap(\.self)).joined(separator: ":")
         }

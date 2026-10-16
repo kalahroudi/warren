@@ -7,11 +7,12 @@ let runtimeUsage = """
 usage: warren runtime <command>
 
   list [--json]                      installed runtimes and their size
-  available <runtime> [--json]       versions that can be installed (node, bun)
+  available <runtime> [--json]       versions that can be installed (node, bun, php)
   install <runtime>[@version]        install a version (default: latest)
   remove <runtime>@<version>         remove an installed version
   which <runtime>                    the newest installed version's folder
   env <site> [--json]                the environment to run a site in (runtimes first on PATH)
+  composer <site> -- <arguments>     run Composer in a site's folder with the site's PHP
 """
 
 private struct InstalledOutput: Encodable {
@@ -48,13 +49,7 @@ func runRuntime(_ arguments: [String], paths: WarrenPaths) async throws {
         try await manager.install(kind, version: version ?? "latest") { print("  \($0)") }
         print("done")
     case let ("remove", spec?):
-        let (kind, version) = try parse(spec)
-        guard let version else { throw CLIError("say which version: \(kind.rawValue)@<version>") }
-        guard let runtime = try manager.inventory().first(where: { $0.kind == kind && $0.version == version }) else {
-            throw CLIError("\(kind.rawValue)@\(version) is not installed")
-        }
-        try manager.remove(runtime)
-        print("removed \(runtime.id)")
+        try removeRuntime(spec, manager: manager)
     case let ("which", name?):
         let wanted = try kind(name)
         let newest = try manager.inventory().filter { $0.kind == wanted }.last
@@ -73,8 +68,43 @@ func runRuntime(_ arguments: [String], paths: WarrenPaths) async throws {
         for need in plan.missing {
             FileHandle.standardError.write(Data("warren: \(need.requirement.label) is not installed\n".utf8))
         }
+    case let ("composer", id?):
+        try runComposer(
+            site: id,
+            arguments: Array(rest.drop { $0 != "--" }.dropFirst()),
+            manager: manager,
+            paths: paths
+        )
     default:
         throw CLIError("unknown or incomplete command\n\n\(runtimeUsage)")
+    }
+}
+
+private func removeRuntime(_ spec: String, manager: RuntimeManager) throws {
+    let (kind, version) = try parse(spec)
+    guard let version else { throw CLIError("say which version: \(kind.rawValue)@<version>") }
+    guard let runtime = try manager.inventory().first(where: { $0.kind == kind && $0.version == version }) else {
+        throw CLIError("\(kind.rawValue)@\(version) is not installed")
+    }
+    try manager.remove(runtime)
+    print("removed \(runtime.id)")
+}
+
+private func runComposer(site id: String, arguments: [String], manager: RuntimeManager, paths: WarrenPaths) throws {
+    let site = try SiteRegistry(paths: paths).show(id: id)
+    let plan = try manager.plan(for: site, installed: manager.inventory())
+    guard plan.needs.contains(where: { $0.requirement.kind == .php && $0.isInstalled }) else {
+        throw CLIError("PHP is not installed for \(id). Run: warren runtime install php")
+    }
+    let process = Process()
+    process.executableURL = URL(fileURLWithPath: "/usr/bin/env")
+    process.arguments = ["composer"] + arguments
+    process.environment = manager.environment(for: plan)
+    process.currentDirectoryURL = URL(fileURLWithPath: site.path, isDirectory: true)
+    try process.run()
+    process.waitUntilExit()
+    if process.terminationStatus != 0 {
+        throw CLIError("composer exited with status \(process.terminationStatus)")
     }
 }
 

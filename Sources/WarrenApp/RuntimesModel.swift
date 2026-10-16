@@ -120,7 +120,8 @@ final class RuntimesModel: ObservableObject {
         Task {
             do {
                 let all = try await Task.detached { try await manager.available(kind) }.value
-                releases[kind] = RuntimeManager.latestPerMajor(all)
+                // PHP lines are minors of one major, so every offered version is listed.
+                releases[kind] = kind == .php ? all.reversed() : RuntimeManager.latestPerMajor(all)
             } catch {
                 message = "Could not list \(kind.displayName) versions: \(error.localizedDescription)"
             }

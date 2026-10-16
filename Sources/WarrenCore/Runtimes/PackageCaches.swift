@@ -2,7 +2,8 @@
 
 import Foundation
 
-/// One shared place for the packages npm, pnpm, Yarn and Bun download, for processes Warren starts. It only sets
+/// One shared place for the packages npm, pnpm, Yarn, Bun and Composer download, for processes Warren starts. It only
+/// sets
 /// the variables each tool already supports. The cache is disposable: clearing it costs a re-download.
 public enum PackageCaches {
     public static func environment(_ paths: WarrenPaths) -> [String: String] {
@@ -17,6 +18,7 @@ public enum PackageCaches {
             "YARN_ENABLE_GLOBAL_CACHE": "1",
             "YARN_GLOBAL_FOLDER": folder("yarn-berry"),
             "BUN_INSTALL_CACHE_DIR": folder("bun"),
+            "COMPOSER_CACHE_DIR": folder("composer"),
         ]
     }
 

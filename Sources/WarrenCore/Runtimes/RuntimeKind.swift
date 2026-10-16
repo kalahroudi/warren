@@ -2,10 +2,11 @@
 
 import Foundation
 
-/// A language runtime Warren can install. PHP and Python follow in specs 008 and 009.
+/// A language runtime Warren can install. Python follows in spec 009.
 public enum RuntimeKind: String, CaseIterable, Codable, Sendable, Identifiable {
     case node
     case bun
+    case php
 
     public var id: String {
         rawValue
@@ -15,6 +16,7 @@ public enum RuntimeKind: String, CaseIterable, Codable, Sendable, Identifiable {
         switch self {
         case .node: "Node"
         case .bun: "Bun"
+        case .php: "PHP"
         }
     }
 
@@ -23,6 +25,7 @@ public enum RuntimeKind: String, CaseIterable, Codable, Sendable, Identifiable {
         switch self {
         case .node: [".nvmrc", ".node-version"]
         case .bun: [".bun-version"]
+        case .php: [".php-version"]
         }
     }
 }
@@ -32,12 +35,14 @@ public enum RequirementSource: Equatable, Codable, Sendable {
     case warrenConfig
     case file(String)
     case engines
+    case composer
 
     public var label: String {
         switch self {
         case .warrenConfig: ".warren.toml"
         case let .file(name): name
         case .engines: "package.json"
+        case .composer: "composer.json"
         }
     }
 }
@@ -56,5 +61,14 @@ public struct RuntimeRequirement: Equatable, Codable, Sendable {
 
     public var label: String {
         "\(kind.displayName) \(requested)"
+    }
+
+    /// The range this requirement asks for, when it came from `package.json` or `composer.json`.
+    var range: VersionRange? {
+        switch source {
+        case .engines: VersionRange(requested)
+        case .composer: VersionRange(composer: requested)
+        default: nil
+        }
     }
 }

@@ -37,7 +37,7 @@ just warren site list --json   # build and run the CLI; see docs/warren-toml.md
 just warren proxy status       # local HTTPS proxy; see docs/proxy.md
 just warren dns status         # local DNS for your domains; see docs/dns.md
 just warren setup status       # which setup steps are done; see docs/setup.md
-just warren runtime list       # Node and Bun versions; see docs/runtimes.md
+just warren runtime list       # Node, Bun and PHP versions; see docs/runtimes.md
 ```
 
 The app shows real state. `WARREN_DEMO=1` shows demo data instead (screenshots, design work), and `WARREN_HOME` points it at another state folder.
