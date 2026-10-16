@@ -54,6 +54,7 @@ func execute(_ plan: SetupPlan, site: ResolvedSite, paths: WarrenPaths, assumeYe
     return await runner.run(
         plan: plan,
         approve: { askForApproval($0, assumeYes: assumeYes) },
+        values: { askValues($0, domain: site.domains.first ?? "\(site.id).test", assumeYes: assumeYes) },
         onEvent: { printEvent($0, titles: titles, logs: logs) }
     )
 }

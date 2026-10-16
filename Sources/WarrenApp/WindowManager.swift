@@ -71,12 +71,17 @@ final class WindowManager: NSObject, NSWindowDelegate {
         addSiteWindow?.close()
         let paths = WarrenPaths.fromEnvironment()
         let model = AddSiteModel(paths: paths) { [weak self] site, runSetup in
-            self?.finishAdding(site, runSetup: runSetup, template: nil)
+            self?.finishAdding(site, runSetup: runSetup, first: nil)
         }
         let project = NewProjectModel(paths: paths) { [weak self] site, template in
-            self?.finishAdding(site, runSetup: true, template: template)
+            self?.finishAdding(site, runSetup: true, first: template.map(FirstRun.template))
         }
-        let view = AddSiteView(model: model, project: project) { [weak self] in self?.addSiteWindow?.close() }
+        let repository = GitHubImportModel(paths: paths) { [weak self] site, reference, branch in
+            self?.finishAdding(site, runSetup: true, first: .clone(reference, branch: branch))
+        }
+        let view = AddSiteView(model: model, project: project, repository: repository) { [weak self] in
+            self?.addSiteWindow?.close()
+        }
         let window = NSWindow(
             contentRect: NSRect(x: 0, y: 0, width: 960, height: 660),
             styleMask: [.titled, .closable],
@@ -94,7 +99,7 @@ final class WindowManager: NSObject, NSWindowDelegate {
 
     /// After a site is added or created: close the window, show the site, and optionally run its setup (for a
     /// template, the scaffolder first, then the normal plan).
-    private func finishAdding(_ site: ResolvedSite, runSetup: Bool, template: ProjectTemplate?) {
+    private func finishAdding(_ site: ResolvedSite, runSetup: Bool, first: FirstRun?) {
         addSiteWindow?.close()
         model.refresh()
         model.section = .sites
@@ -104,7 +109,7 @@ final class WindowManager: NSObject, NSWindowDelegate {
         DispatchQueue.main.async {
             self.openMain()
             if runSetup {
-                self.setupRun.start(siteID: site.id, template: template)
+                self.setupRun.start(siteID: site.id, first: first)
             }
         }
     }

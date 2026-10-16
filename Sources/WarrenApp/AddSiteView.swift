@@ -5,10 +5,11 @@ import UniformTypeIdentifiers
 import WarrenCore
 
 struct AddSiteView: View {
-    enum Source { case folder, template, blank }
+    enum Source { case folder, github, template, blank }
 
     @ObservedObject var model: AddSiteModel
     @ObservedObject var project: NewProjectModel
+    @ObservedObject var repository: GitHubImportModel
     let close: () -> Void
     @State private var dropTargeted = false
     @State private var source = Source.folder
@@ -27,6 +28,8 @@ struct AddSiteView: View {
                     }
                     Spacer(minLength: 0)
                     footer
+                } else if source == .github {
+                    GitHubImportView(model: repository, close: close)
                 } else {
                     NewProjectView(model: project, close: close)
                 }
@@ -43,7 +46,10 @@ struct AddSiteView: View {
     private var sources: some View {
         VStack(alignment: .leading, spacing: 6) {
             source("Folder", symbol: "folder", note: nil, selected: source == .folder) { source = .folder }
-            source("From GitHub", symbol: "arrow.down.circle", note: "Spec 014", selected: false, action: nil)
+            source("From GitHub", symbol: "arrow.down.circle", note: nil, selected: source == .github) {
+                source = .github
+                repository.validate()
+            }
             source("From a template", symbol: "square.stack.3d.up", note: nil, selected: source == .template) {
                 source = .template
                 project.kind = .template

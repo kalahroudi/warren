@@ -24,6 +24,8 @@ public enum NewProjectError: Error, Equatable, LocalizedError, Sendable {
 public enum NewProjectSource: Equatable, Sendable {
     case template(ProjectTemplate)
     case blank(BlankKind)
+    /// An existing repository, cloned into the new folder by the clone plan.
+    case repository(RepositoryReference, branch: String?)
 }
 
 public struct NewProjectRequest: Equatable, Sendable {

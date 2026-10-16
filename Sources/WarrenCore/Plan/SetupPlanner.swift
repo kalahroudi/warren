@@ -33,6 +33,9 @@ public struct SetupPlanner: Sendable {
         if let envStep {
             steps.append(envStep)
         }
+        if let values = envValuesStep(envInfo, waitsFor: envStep.map { $0.state.isDone ? [] : [$0.id] } ?? []) {
+            steps.append(values)
+        }
         let serviceSteps = services.map(serviceStep)
         steps += serviceSteps
         steps += applicationSteps(detection: detection, env: envInfo, directory: directory, steps: steps)
@@ -43,7 +46,7 @@ public struct SetupPlanner: Sendable {
         let summary = EnvSummary(
             example: envInfo.example?.name,
             envExists: envInfo.current != nil,
-            emptyVariables: envInfo.example?.file.emptyKeys ?? []
+            emptyVariables: envInfo.example?.file.unsetKeys ?? []
         )
         steps = applyingMemory(to: steps, site: site.id)
         return SetupPlan(
@@ -56,7 +59,7 @@ public struct SetupPlanner: Sendable {
     private func applyingMemory(to steps: [PlanStep], site: String) -> [PlanStep] {
         let remembered = SetupRunStore(paths: paths).completed(site: site)
         return steps.map { step in
-            guard Self.isRemembered(step), let command = step.command, remembered[step.id]?.command == command
+            guard Self.isRemembered(step), let command = step.memoryCommand, remembered[step.id]?.command == command
             else { return step }
             var done = step
             done.state = .done
@@ -66,10 +69,11 @@ public struct SetupPlanner: Sendable {
 
     /// Steps whose outcome cannot be seen in the folder: migrations, the project's own steps, pip installs.
     static func isRemembered(_ step: PlanStep) -> Bool {
-        step.kind == .database || step.kind == .optional || (step.id == "dependencies" && step.command?.starts(with: [
-            "uv",
-            "pip"
-        ]) == true)
+        step.kind == .database || step.kind == .optional || step
+            .kind == .envValues || (step.id == "dependencies" && step.command?.starts(with: [
+                "uv",
+                "pip"
+            ]) == true)
     }
 
     // MARK: Dependencies
@@ -159,12 +163,12 @@ public struct SetupPlanner: Sendable {
 
     // MARK: Environment and services
 
-    private struct EnvInfo {
+    struct EnvInfo {
         var example: (name: String, file: EnvFile)?
         var current: EnvFile?
     }
 
-    private func readEnv(in directory: URL) -> EnvInfo {
+    func readEnv(in directory: URL) -> EnvInfo {
         var info = EnvInfo()
         let fileManager = FileManager.default
         if let name = EnvFile.exampleNames
@@ -187,11 +191,11 @@ public struct SetupPlanner: Sendable {
                 runsProjectCode: false, state: .done, waitsFor: [], enabledByDefault: true
             )
         }
-        let empty = example.file.emptyKeys
+        let empty = example.file.unsetKeys
         var detail = "Copies \(example.name) to .env."
         if !empty.isEmpty {
             let shown = empty.prefix(4).joined(separator: ", ")
-            detail += " Still empty afterwards: \(shown)\(empty.count > 4 ? " and \(empty.count - 4) more" : "")."
+            detail += " Still to fill in afterwards: \(shown)\(empty.count > 4 ? " and \(empty.count - 4) more" : "")."
         }
         return PlanStep(
             id: "env", kind: .envFile, title: "Create .env", detail: detail, command: nil,

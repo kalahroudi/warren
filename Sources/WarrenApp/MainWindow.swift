@@ -32,6 +32,12 @@ struct MainWindowView: View {
                 .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
         }
         .frame(minWidth: 960, minHeight: 620)
+        .sheet(item: $setupRun.pendingValues) { pending in
+            ValuesSheet(pending: pending) { values in
+                setupRun.resolve(pending, values: values)
+            }
+            .interactiveDismissDisabled()
+        }
         .sheet(item: $setupRun.pendingApproval) { approval in
             ApprovalSheet(approval: approval) { approved, trust in
                 setupRun.resolve(approval, approved: approved, trust: trust)

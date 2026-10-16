@@ -3,6 +3,12 @@
 import SwiftUI
 import WarrenCore
 
+/// What fills a new project's folder before its normal setup plan: a template's scaffolder or a repository clone.
+enum FirstRun {
+    case template(ProjectTemplate)
+    case clone(RepositoryReference, branch: String?)
+}
+
 /// Progress of one step in a run.
 struct StepProgress: Equatable {
     enum Status: Equatable { case waiting, running, done, failed, skipped, cancelled }
@@ -11,6 +17,15 @@ struct StepProgress: Equatable {
     /// The last lines of output, newest last.
     var lines: [String] = []
     var note: String?
+}
+
+/// Variables waiting for the user's answers.
+struct PendingValues: Identifiable {
+    let id = UUID()
+    let prompts: [EnvPrompt]
+    let domain: String
+    let envIsIgnored: Bool
+    let continuation: CheckedContinuation<[String: String], Never>
 }
 
 /// Steps waiting for the user's decision before any project code runs.
@@ -31,6 +46,7 @@ final class SetupRunModel: ObservableObject {
     @Published private(set) var running = false
     @Published private(set) var summary: RunSummary?
     @Published var pendingApproval: PendingApproval?
+    @Published var pendingValues: PendingValues?
     @Published private(set) var trusted: [String: Int] = [:]
 
     private let paths: WarrenPaths
@@ -50,7 +66,7 @@ final class SetupRunModel: ObservableObject {
 
     /// Starts a run for a registered site, planning from the machine as it is now. For a new project made from a
     /// template, the scaffolder runs first and the project's normal plan follows once it has finished.
-    func start(siteID id: String, template: ProjectTemplate? = nil, optional: Set<String> = []) {
+    func start(siteID id: String, first: FirstRun? = nil, optional: Set<String> = []) {
         guard enabled, !running else { return }
         siteID = id
         steps = []
@@ -59,7 +75,7 @@ final class SetupRunModel: ObservableObject {
         running = true
         let paths = paths
         task = Task { [weak self] in
-            guard let prepared = await Task.detached(operation: { Self.prepare(id, template: template, paths: paths) })
+            guard let prepared = await Task.detached(operation: { Self.prepare(id, first: first, paths: paths) })
                 .value
             else {
                 self?.running = false
@@ -67,8 +83,8 @@ final class SetupRunModel: ObservableObject {
             }
             guard let self else { return }
             var result = await execute(prepared.plan, site: prepared.site, optional: optional)
-            if template != nil, result.succeeded,
-               let next = await Task.detached(operation: { Self.prepare(id, template: nil, paths: paths) }).value
+            if first != nil, result.succeeded,
+               let next = await Task.detached(operation: { Self.prepare(id, first: nil, paths: paths) }).value
             {
                 result = await execute(next.plan, site: next.site, optional: [])
             }
@@ -84,6 +100,8 @@ final class SetupRunModel: ObservableObject {
         steps = PlanRunner.selectedSteps(plan, optional: optional)
         progress = Dictionary(uniqueKeysWithValues: steps.map { ($0.id, StepProgress()) })
         let folder = site.path
+        let domain = site.domains.first ?? "\(site.id).test"
+        let ignored = EnvEditor.isIgnored(in: URL(fileURLWithPath: folder))
         return await PlanRunner(paths: paths, site: site).run(
             plan: plan,
             optional: optional,
@@ -95,6 +113,16 @@ final class SetupRunModel: ObservableObject {
                     }
                 }
             },
+            values: { [weak self] prompts in
+                await withCheckedContinuation { continuation in
+                    Task { @MainActor in
+                        guard let self else { return continuation.resume(returning: [:]) }
+                        self.pendingValues = PendingValues(
+                            prompts: prompts, domain: domain, envIsIgnored: ignored, continuation: continuation
+                        )
+                    }
+                }
+            },
             onEvent: { [weak self] event in
                 Task { @MainActor in self?.apply(event) }
             }
@@ -102,13 +130,18 @@ final class SetupRunModel: ObservableObject {
     }
 
     private nonisolated static func prepare(
-        _ id: String, template: ProjectTemplate?, paths: WarrenPaths
+        _ id: String, first: FirstRun?, paths: WarrenPaths
     ) -> (site: ResolvedSite, plan: SetupPlan)? {
         guard let site = try? SiteRegistry(paths: paths).show(id: id) else { return nil }
         let manager = RuntimeManager(paths: paths)
         let inventory = (try? manager.inventory()) ?? []
-        if let template {
+        switch first {
+        case let .template(template)?:
             return (site, TemplatePlanner.plan(template, site: site, inventory: inventory))
+        case let .clone(reference, branch)?:
+            return (site, ClonePlanner.plan(reference, branch: branch, site: site))
+        case nil:
+            break
         }
         let plan = SetupPlanner(paths: paths).plan(
             for: site, registered: true, inventory: inventory, tools: (try? manager.installedTools()) ?? []
@@ -122,10 +155,19 @@ final class SetupRunModel: ObservableObject {
         approval.continuation.resume(returning: PlanApproval(approved: approved, trust: trust))
     }
 
+    /// Answers the values sheet. An empty dictionary keeps the placeholders.
+    func resolve(_ pending: PendingValues, values: [String: String]) {
+        pendingValues = nil
+        pending.continuation.resume(returning: values)
+    }
+
     func stop() {
         task?.cancel()
         if let pending = pendingApproval {
             resolve(pending, approved: [], trust: false)
+        }
+        if let pending = pendingValues {
+            resolve(pending, values: [:])
         }
     }
 
