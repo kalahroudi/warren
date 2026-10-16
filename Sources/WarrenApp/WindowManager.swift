@@ -8,12 +8,14 @@ import SwiftUI
 final class WindowManager: NSObject, NSWindowDelegate {
     private let model: AppModel
     private let setup: SetupModel
+    private let runtimes: RuntimesModel
     private var mainWindow: NSWindow?
     private var setupWindow: NSWindow?
 
-    init(model: AppModel, setup: SetupModel) {
+    init(model: AppModel, setup: SetupModel, runtimes: RuntimesModel) {
         self.model = model
         self.setup = setup
+        self.runtimes = runtimes
     }
 
     func openMain() {
@@ -25,7 +27,10 @@ final class WindowManager: NSObject, NSWindowDelegate {
                 defer: false
             )
             window.title = "Warren"
-            window.contentViewController = NSHostingController(rootView: MainWindowView(model: model))
+            window.contentViewController = NSHostingController(rootView: MainWindowView(
+                model: model,
+                runtimes: runtimes
+            ))
             window.setContentSize(NSSize(width: 1100, height: 720))
             window.isReleasedWhenClosed = false
             window.delegate = self

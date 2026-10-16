@@ -12,6 +12,7 @@ usage: warren <command>
   site remove <id>             unregister a site (never deletes files)
   proxy <command>              local HTTPS proxy (see: warren proxy)
   dns <command>                local DNS for your domains (see: warren dns)
+  runtime <command>            Node and Bun versions (see: warren runtime)
   setup status                 which setup steps are done
   --version                    print the version
 
@@ -92,6 +93,12 @@ case "proxy":
 case "dns":
     do {
         try await runDNS(Array(arguments.dropFirst()), paths: .fromEnvironment())
+    } catch {
+        fail(error.localizedDescription)
+    }
+case "runtime":
+    do {
+        try await runRuntime(Array(arguments.dropFirst()), paths: .fromEnvironment())
     } catch {
         fail(error.localizedDescription)
     }

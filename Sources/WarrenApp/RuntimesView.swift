@@ -5,12 +5,27 @@ import WarrenCore
 
 struct RuntimesView: View {
     @ObservedObject var model: AppModel
+    @ObservedObject var runtimes: RuntimesModel
 
     var body: some View {
         VStack(alignment: .leading, spacing: 18) {
             PageHeader(title: "Runtimes",
-                       subtitle: "Per-site versions, picked up from .nvmrc, .php-version and friends.",
+                       subtitle: "Per-site versions, picked up from .nvmrc, package.json and friends.",
                        preview: model.snapshot.previewSections.contains("Runtimes"))
+            if model.snapshot.isLive {
+                InstalledRuntimesView(runtimes: runtimes)
+            } else {
+                demoGroups
+            }
+            Spacer()
+        }
+        .padding(24)
+        .onAppear { runtimes.reload() }
+        .onChange(of: model.snapshot.sites.map(\.id)) { runtimes.reload() }
+    }
+
+    private var demoGroups: some View {
+        VStack(alignment: .leading) {
             LazyVGrid(columns: [GridItem(.flexible(), spacing: 14), GridItem(.flexible())], spacing: 14) {
                 ForEach(model.snapshot.runtimeGroups) { group in
                     Card {
@@ -36,9 +51,7 @@ struct RuntimesView: View {
                     }
                 }
             }
-            Spacer()
         }
-        .padding(24)
     }
 
     private func tint(_ version: RuntimeVersion) -> Color {

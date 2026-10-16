@@ -3,7 +3,7 @@
 import Foundation
 
 /// Real sites from the registry and the real state of the proxy and DNS server.
-/// Services, runtimes, agents and storage do not exist yet, so they keep demo data and are flagged as previews.
+/// Services, agents and storage do not exist yet, so they keep demo data and are flagged as previews.
 @MainActor
 public final class LiveProvider: StateProvider {
     private let paths: WarrenPaths
@@ -23,7 +23,10 @@ public final class LiveProvider: StateProvider {
         var snapshot = preview.snapshot()
         let sites = liveSites()
         snapshot.sites = sites
-        snapshot.activeRuntimes = Set(sites.map(\.runtime).filter { $0 != Self.noRuntime }).sorted()
+        snapshot.runtimeGroups = []
+        snapshot
+            .activeRuntimes = Set(sites.flatMap { $0.runtime.components(separatedBy: ", ") }
+                .filter { $0 != Self.noRuntime }).sorted()
         snapshot.network = network.status()
         let paused = UserState.load(paths).paused
         // A paused Warren is complete but switched off, so it is not nagged about setup.
@@ -37,7 +40,7 @@ public final class LiveProvider: StateProvider {
             canPause: paused || network.proxy.isInstalled || network.dns.isInstalled
         )
         snapshot.isLive = true
-        snapshot.previewSections = ["Services", "Runtimes", "Agents", "Storage"]
+        snapshot.previewSections = ["Services", "Agents", "Storage"]
         return snapshot
     }
 
@@ -79,14 +82,14 @@ public final class LiveProvider: StateProvider {
     private func liveSites() -> [Site] {
         let home = FileManager.default.homeDirectoryForCurrentUser.path
         return ((try? SiteRegistry(paths: paths).list()) ?? []).map { site in
-            let runtime = site.runtimes.sorted { $0.key < $1.key }.first
-                .map { "\($0.key.capitalized) \($0.value)" } ?? Self.noRuntime
+            let runtime = RuntimeResolver.requirements(for: site).map(\.label).joined(separator: ", ")
+            let label = runtime.isEmpty ? Self.noRuntime : runtime
             let listening = site.port.map(PortCheck.isListening) ?? false
             return Site(
                 id: site.id,
                 domain: site.domains.first ?? site.id,
                 stack: "Unknown",
-                runtime: runtime,
+                runtime: label,
                 detail: site.port.map { ":\($0)" } ?? "no port set",
                 path: site.path.hasPrefix(home) ? "~" + site.path.dropFirst(home.count) : site.path,
                 state: listening ? .running : .stopped,

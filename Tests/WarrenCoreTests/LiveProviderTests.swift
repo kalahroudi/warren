@@ -53,6 +53,16 @@ struct LiveProviderTests {
         #expect(provider.snapshot().activeRuntimes == ["Node 22"])
     }
 
+    @Test func aSiteTakesItsRuntimesFromTheProjectsVersionFiles() throws {
+        try addSite("api")
+        try "v20.11.1\n".write(to: root.appendingPathComponent("api/.nvmrc"), atomically: true, encoding: .utf8)
+        try "1.4.3\n".write(to: root.appendingPathComponent("api/.bun-version"), atomically: true, encoding: .utf8)
+        let snapshot = provider.snapshot()
+        #expect(snapshot.sites.first?.runtime == "Node 20.11.1, Bun 1.4.3")
+        #expect(snapshot.activeRuntimes == ["Bun 1.4.3", "Node 20.11.1"])
+        #expect(snapshot.runtimeGroups.isEmpty)
+    }
+
     @Test func aSiteWithoutAPortOrRuntimeSaysSo() throws {
         try addSite("plain")
         let site = try #require(provider.snapshot().sites.first)
@@ -70,7 +80,7 @@ struct LiveProviderTests {
     }
 
     @Test func demoOnlySectionsAreFlaggedAsPreviews() {
-        #expect(provider.snapshot().previewSections == ["Services", "Runtimes", "Agents", "Storage"])
+        #expect(provider.snapshot().previewSections == ["Services", "Agents", "Storage"])
     }
 
     @Test func controlsThatDoNothingYetAreOff() {
