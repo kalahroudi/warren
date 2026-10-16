@@ -50,7 +50,7 @@ public struct ToolInstaller: Sendable {
         guard actual == expected else {
             throw ToolInstallError.checksumMismatch(expected: expected, actual: actual)
         }
-        return try unpack(archive, release: release)
+        return try unpack(archive, release: release, pathInArchive: asset.pathInArchive)
     }
 
     public static func sha512Hex(of file: URL) throws -> String {
@@ -97,7 +97,7 @@ public struct ToolInstaller: Sendable {
         }
     }
 
-    private func unpack(_ archive: URL, release: ToolRelease) throws -> URL {
+    private func unpack(_ archive: URL, release: ToolRelease, pathInArchive: String?) throws -> URL {
         let scratch = FileManager.default.temporaryDirectory.appendingPathComponent(
             "warren-\(UUID().uuidString)",
             isDirectory: true
@@ -108,7 +108,7 @@ public struct ToolInstaller: Sendable {
         let result = try Shell.run("/usr/bin/tar", ["-xzf", archive.path, "-C", scratch.path])
         guard result.status == 0 else { throw ToolInstallError.extractionFailed(result.output) }
 
-        let extracted = scratch.appendingPathComponent(release.pathInArchive ?? release.binaryName)
+        let extracted = scratch.appendingPathComponent(pathInArchive ?? release.pathInArchive ?? release.binaryName)
         guard FileManager.default.fileExists(atPath: extracted.path) else {
             throw ToolInstallError.binaryMissing(release.binaryName)
         }

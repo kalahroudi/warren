@@ -60,9 +60,10 @@ struct RuntimeTests {
         #expect(try requirements(["package.json": #"{"name":"x"}"#]).isEmpty)
     }
 
-    @Test func toolVersionsNamesNodeAndBun() throws {
-        let found = try requirements([".tool-versions": "# runtimes\nnodejs 22.1.0\nbun 1.4.3\npython 3.13\n"])
-        #expect(found.map(\.label) == ["Node 22.1.0", "Bun 1.4.3"])
+    @Test func toolVersionsNamesEachRuntimeWarrenKnows() throws {
+        let found =
+            try requirements([".tool-versions": "# runtimes\nnodejs 22.1.0\nbun 1.4.3\npython 3.13\nruby 3.3\n"])
+        #expect(found.map(\.label) == ["Node 22.1.0", "Bun 1.4.3", "Python 3.13"])
     }
 
     @Test func versionFileSpellingsAreNormalised() {

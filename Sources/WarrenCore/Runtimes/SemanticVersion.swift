@@ -89,6 +89,32 @@ struct VersionRange: Sendable {
         self.init(rewritten)
     }
 
+    /// PEP 440 specifiers as `requires-python` writes them: `>=3.10`, `>=3.10,<3.13`, `==3.12.*`, `~=3.11`.
+    /// `~=3.11` allows any 3.x from 3.11 (npm's `^3.11`); `~=3.11.2` stays within 3.11 (npm's `~`). `!=`, `===` and
+    /// pre-release markers are not supported and make the range unreadable.
+    init?(pep440 text: String) {
+        let tokens = text.replacingOccurrences(of: ",", with: " ").split(whereSeparator: \.isWhitespace)
+        var merged: [String] = []
+        for token in tokens {
+            if let last = merged.last, ["<", ">", "<=", ">=", "==", "~="].contains(last) {
+                merged[merged.count - 1] = last + token
+            } else {
+                merged.append(String(token))
+            }
+        }
+        let rewritten = merged.map { token -> String in
+            if token.hasPrefix("~=") {
+                let body = token.dropFirst(2)
+                return (body.split(separator: ".").count == 2 ? "^" : "~") + body
+            }
+            if token.hasPrefix("===") {
+                return "!" // arbitrary equality is not supported
+            }
+            return token.hasPrefix("==") ? String(token.dropFirst(2)) : token
+        }
+        self.init(rewritten.joined(separator: " "))
+    }
+
     func contains(_ version: SemanticVersion) -> Bool {
         alternatives.contains { $0.allSatisfy { $0.contains(version) } }
     }

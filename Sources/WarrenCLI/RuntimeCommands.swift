@@ -7,7 +7,7 @@ let runtimeUsage = """
 usage: warren runtime <command>
 
   list [--json]                      installed runtimes and their size
-  available <runtime> [--json]       versions that can be installed (node, bun, php)
+  available <runtime> [--json]       versions that can be installed (node, bun, php, python)
   install <runtime>[@version]        install a version (default: latest)
   remove <runtime>@<version>         remove an installed version
   which <runtime>                    the newest installed version's folder
