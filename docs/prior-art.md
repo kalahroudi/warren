@@ -7,7 +7,7 @@ Warren should be built from stable, existing parts. This list is a starting poin
 | Parsing `.warren.toml` | TOMLDecoder (pure Swift, Codable), TOMLKit and swift-toml (both wrap the C++ toml++ parser) | TOMLDecoder (decided in 004) | 004 |
 | Node, Bun, Deno and other runtimes | mise (polyglot, reads `.nvmrc`, `.tool-versions`), fnm (Node only), Volta | mise | 007 |
 | Python | uv (versions, venvs, packages) | uv | 009 |
-| PHP | Prebuilt static PHP binaries, mise plugins, Homebrew builds | Needs investigation: prebuilt FPM binaries are the key question | 008 |
+| PHP | Prebuilt static PHP binaries, mise plugins, Homebrew builds | Prebuilt static-php-cli binaries (cli and fpm), pinned by SHA-256, plus Composer's phar (surveyed in 008) | 008 |
 | Package caches | pnpm, uv, Bun and Composer shared stores, pointed at one location by environment variables | Their own caches | 007 |
 | Framework and project detection | Nixpacks and Railpack detectors, buildpacks, `package.json` and lockfile heuristics | Evaluate Railpack and Nixpacks before writing detectors | 010, 011 |
 | Reverse proxy and local HTTPS | Caddy (automatic HTTPS, internal CA, admin API for live config), mkcert plus a proxy | Caddy as a managed helper binary (decided in 005) | 005 |
