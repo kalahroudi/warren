@@ -39,6 +39,7 @@ just warren dns status         # local DNS for your domains; see docs/dns.md
 just warren setup status       # which setup steps are done; see docs/setup.md
 just warren runtime list       # Node, Bun, PHP and Python versions; see docs/runtimes.md
 just warren site detect .      # what a folder is and how it starts; see docs/frameworks.md
+just warren site plan .        # what it takes to run a folder; see docs/setup-plan.md
 ```
 
 The app shows real state. `WARREN_DEMO=1` shows demo data instead (screenshots, design work), and `WARREN_HOME` points it at another state folder.

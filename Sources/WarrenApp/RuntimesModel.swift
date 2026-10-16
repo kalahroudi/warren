@@ -15,11 +15,13 @@ final class RuntimesModel: ObservableObject {
     private struct Loaded: Sendable {
         let inventory: [InstalledRuntime]
         let plans: [SiteRuntimePlan]
+        let setups: [String: SetupPlan]
         let cacheBytes: Int64
     }
 
     @Published private(set) var installed: [InstalledRuntime] = []
     @Published private(set) var plans: [SiteRuntimePlan] = []
+    @Published private(set) var setups: [String: SetupPlan] = [:]
     @Published private(set) var releases: [RuntimeKind: [String]] = [:]
     @Published private(set) var cacheBytes: Int64 = 0
     @Published private(set) var loaded = false
@@ -55,9 +57,14 @@ final class RuntimesModel: ObservableObject {
             let result = await Task.detached { () -> Loaded? in
                 guard let inventory = try? manager.inventory() else { return nil }
                 let sites = (try? SiteRegistry(paths: paths).list()) ?? []
+                let planner = SetupPlanner(paths: paths)
+                let setups = Dictionary(uniqueKeysWithValues: sites.map {
+                    ($0.id, planner.plan(for: $0, registered: true, inventory: inventory))
+                })
                 return Loaded(
                     inventory: inventory,
                     plans: sites.map { manager.plan(for: $0, installed: inventory) },
+                    setups: setups,
                     cacheBytes: PackageCaches.bytes(paths)
                 )
             }.value
@@ -67,6 +74,7 @@ final class RuntimesModel: ObservableObject {
             }
             installed = result.inventory
             plans = result.plans
+            setups = result.setups
             cacheBytes = result.cacheBytes
             loaded = true
         }

@@ -26,6 +26,8 @@ Warren knows which sites exist and how each is configured. A persistent registry
 
 **Registry file.** `{"version": 1, "sites": [{"id", "path", "addedAt"}]}`. Writes are atomic (temp file, then rename). A file with a newer `version` is rejected, not rewritten. A corrupt file is moved to `sites.json.corrupt-<unix time>` and the command fails with the backup path; it is never silently overwritten.
 
+**Name and domains chosen at registration** (amended by 011). `add` may take a name and domains, stored with the site as optional `name` and `domains` fields in `sites.json` (additive; the file version stays 1). A `.warren.toml` that sets the same field wins; the project is never written to.
+
 **Registering a site.** The path must exist and be a directory. The id is the folder name as a slug (lowercase, runs of other characters become `-`, trimmed, `site` if empty), with `-2`, `-3` added if taken. Registering the same path twice is an error. Removing a site never touches project files.
 
 **Effective configuration.** Defaults plus `.warren.toml` overrides:

@@ -6,6 +6,9 @@ public struct RegisteredSite: Codable, Equatable, Sendable {
     public let id: String
     public let path: String
     public let addedAt: Date
+    /// Name and domains chosen when adding the site. A `.warren.toml` that sets the same field wins.
+    public var name: String?
+    public var domains: [String]?
 }
 
 /// A registered site with its `.warren.toml` applied over the defaults.
@@ -67,37 +70,63 @@ public struct SiteRegistry: Sendable {
         return resolve(site)
     }
 
+    /// Registers a folder. `name` and `domains` are stored with the site (not written into the project); a
+    /// `.warren.toml` that sets the same field wins.
     @discardableResult
-    public func add(path: String) throws -> ResolvedSite {
+    public func add(path: String, name: String? = nil, domains: [String]? = nil) throws -> ResolvedSite {
+        let (record, resolved) = try prepare(path: path, name: name, domains: domains)
+        var contents = try load()
+        try validate(resolved, against: contents.sites)
+        contents.sites.append(record)
+        try save(contents)
+        return resolved
+    }
+
+    /// What `add` would register, without registering it: the id the folder would get and its resolved settings.
+    /// Throws what `add` would throw, including a domain clash.
+    public func preview(path: String, name: String? = nil, domains: [String]? = nil) throws -> ResolvedSite {
+        let (_, resolved) = try prepare(path: path, name: name, domains: domains)
+        try validate(resolved, against: load().sites)
+        return resolved
+    }
+
+    /// The id a folder would get, for suggesting a name and domain before the user chooses.
+    public func suggestedID(forFolder folder: String) throws -> String {
+        try uniqueID(for: folder, among: load().sites)
+    }
+
+    private func prepare(path: String, name: String?, domains: [String]?) throws -> (RegisteredSite, ResolvedSite) {
         let url = URL(fileURLWithPath: path).standardizedFileURL.resolvingSymlinksInPath()
         var isDirectory: ObjCBool = false
         guard FileManager.default.fileExists(atPath: url.path, isDirectory: &isDirectory) else {
             throw RegistryError.pathNotFound(path)
         }
         guard isDirectory.boolValue else { throw RegistryError.notADirectory(path) }
-
-        var contents = try load()
+        let contents = try load()
         if let existing = contents.sites.first(where: { $0.path == url.path }) {
             throw RegistryError.alreadyRegistered(id: existing.id)
         }
-        let record = RegisteredSite(
+        let cleanName = name?.trimmingCharacters(in: .whitespacesAndNewlines)
+        let record = try RegisteredSite(
             id: uniqueID(for: url.lastPathComponent, among: contents.sites),
             path: url.path,
-            addedAt: Date()
+            addedAt: Date(),
+            name: cleanName?.isEmpty == false ? cleanName : nil,
+            domains: domains.map { try $0.map(DomainName.normalize) }
         )
-        let resolved = resolve(record)
+        return (record, resolve(record))
+    }
+
+    private func validate(_ resolved: ResolvedSite, against sites: [RegisteredSite]) throws {
         if let reserved = resolved.domains.first(where: CaddyConfig.reservedDomains.contains) {
             throw RegistryError.domainConflict(domain: reserved, otherSite: "Warren (reserved)")
         }
-        for other in contents.sites {
+        for other in sites {
             let claimed = resolve(other).domains
             if let clash = resolved.domains.first(where: claimed.contains) {
                 throw RegistryError.domainConflict(domain: clash, otherSite: other.id)
             }
         }
-        contents.sites.append(record)
-        try save(contents)
-        return resolved
     }
 
     public func remove(id: String) throws {
@@ -121,8 +150,8 @@ public struct SiteRegistry: Sendable {
         return ResolvedSite(
             id: site.id,
             path: site.path,
-            name: config.name ?? directory.lastPathComponent,
-            domains: config.domains.isEmpty ? ["\(site.id).test"] : config.domains,
+            name: config.name ?? site.name ?? directory.lastPathComponent,
+            domains: config.domains.isEmpty ? site.domains ?? ["\(site.id).test"] : config.domains,
             runtimes: config.runtimes,
             command: config.command,
             port: config.port,

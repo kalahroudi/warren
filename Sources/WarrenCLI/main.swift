@@ -10,6 +10,7 @@ usage: warren <command>
   site list [--json]           list registered sites
   site show <id> [--json]      show one site's resolved settings
   site detect <site or folder> [--json]  what the project is and how it starts
+  site plan <site or folder> [--json]  what it takes to run the project
   site remove <id>             unregister a site (never deletes files)
   proxy <command>              local HTTPS proxy (see: warren proxy)
   dns <command>                local DNS for your domains (see: warren dns)
@@ -57,6 +58,40 @@ func detect(_ target: String, registry: SiteRegistry) throws -> FrameworkDetecti
     return FrameworkDetector.detect(in: directory, command: config?.command, domains: config?.domains ?? [])
 }
 
+/// The plan for a registered site, or for a folder that is not registered yet.
+func setupPlan(_ target: String, registry: SiteRegistry) throws -> SetupPlan {
+    let inventory = (try? RuntimeManager(paths: registry.paths).inventory()) ?? []
+    let planner = SetupPlanner(paths: registry.paths)
+    if let site = try? registry.show(id: target) {
+        return planner.plan(for: site, registered: true, inventory: inventory)
+    }
+    var isDirectory: ObjCBool = false
+    guard FileManager.default.fileExists(atPath: target, isDirectory: &isDirectory), isDirectory.boolValue else {
+        throw CLIError("'\(target)' is neither a registered site nor a folder")
+    }
+    let site = try registry.preview(path: target)
+    return planner.plan(for: site, registered: false, inventory: inventory)
+}
+
+func describe(_ plan: SetupPlan) {
+    describe(plan.detection)
+    print("  setup plan:")
+    for step in plan.steps {
+        let mark: String = switch step.state {
+        case .done: "[x]"
+        case .todo: step.enabledByDefault ? "[ ]" : "[-]"
+        case .waiting: "[~]"
+        }
+        print("    \(mark) \(step.title)\(step.runsProjectCode && !step.state.isDone ? "  (runs project code)" : "")")
+        if let command = step.commandLine, !step.state.isDone {
+            print("          $ \(command)")
+        }
+        if case let .waiting(reason) = step.state {
+            print("          waiting: \(reason)")
+        }
+    }
+}
+
 func describe(_ detection: FrameworkDetection) {
     print("  framework: \(detection.displayName)")
     print("  starts with: \(detection.startLine)")
@@ -92,6 +127,13 @@ func runSite(_ arguments: [String], registry: SiteRegistry) throws {
         } else {
             describe(site)
             describe(FrameworkDetector.detect(site: site))
+        }
+    case let ("plan", target?):
+        let plan = try setupPlan(target, registry: registry)
+        if json {
+            printJSON(plan)
+        } else {
+            describe(plan)
         }
     case let ("detect", target?):
         let detection = try detect(target, registry: registry)

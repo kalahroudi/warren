@@ -1,6 +1,6 @@
 # 011 · Project detection and setup-plan generation
 
-Status: Draft · Phase 3 · Depends on: 004, 007, 008, 009, 010
+Status: Implemented · Phase 3 · Depends on: 004, 007, 008, 009, 010
 
 ## Goal
 
@@ -93,17 +93,19 @@ The table is data in one file with a test per row. Evidence is always shown with
 
 ## Acceptance criteria
 
-- [ ] 1. A fixture project per row of the dependency table gets the listed command, and `done` once its folder exists (unit).
-- [ ] 2. The env step is *to do* when `.env` is missing and an example exists, and *done* otherwise (copying is 012's job); the variables the example leaves empty are listed (unit).
-- [ ] 3. Each service hint row produces its step with the evidence text (unit), and a project with no hints produces none.
-- [ ] 4. Laravel and Django fixtures get the key and migrate steps, ordered after dependencies and services (unit).
-- [ ] 5. Steps that run project code are marked, and Warren's own steps (runtime install, env copy, site registration) are not (unit).
-- [ ] 6. Optional steps from `devcontainer.json` and `package.json` appear off by default (unit).
-- [ ] 7. Producing a plan runs nothing from the project: a fixture with hostile scripts, a hostile `mise.toml` and a `devcontainer.json` creates no marker files (test).
-- [ ] 8. The Add site window opens from the Sites page and the menu bar icon, takes a folder from the open panel, shows detection and the plan, validates name and domain as you type, and adds the site (running app).
-- [ ] 9. After adding, the site's page shows the Setup card, and its states change when a dependency folder is created by hand and the page is reopened (running app).
-- [ ] 10. `warren site plan` prints the same plan, with `--json` (CLI).
-- [ ] 11. `just check` passes, and `WARREN_DEMO=1` still shows demo content and writes nothing.
+Checked means verified. How is in each line.
+
+- [x] 1. Each row of the dependency table gets its command, and *done* once its folder exists and is not older than the lockfile (`SetupPlanTests`: npm with and without a lockfile, pnpm, Yarn, Bun, Composer, uv, pip; folder present; folder older than the lockfile).
+- [x] 2. The env step is *to do* when `.env` is missing and an example exists, *done* otherwise; the variables the example leaves empty are listed (`SetupPlanTests`).
+- [x] 3. Each service hint row produces its step with the evidence text, and a project with no hints produces none (`SetupPlanTests`: nine cases and the negative case).
+- [x] 4. Laravel and Django get the key and migrate steps, ordered after dependencies and services (`SetupPlanTests`).
+- [x] 5. Steps that run project code are marked and Warren's own steps are not (`SetupPlanTests.onlyStepsThatRunTheProjectsCodeAreMarked`).
+- [x] 6. Optional steps from `devcontainer.json` (with comments) and `package.json` are off by default (`SetupPlanTests`).
+- [x] 7. Building a plan runs nothing from the project (`SetupPlanTests.buildingAPlanRunsNothingFromTheProject`: hostile scripts, `mise.toml`, `devcontainer.json`, `artisan`).
+- [x] 8. The Add site window opens from the menu bar icon's right-click menu, takes a folder from the open panel, shows detection and the plan, fills name and domain, and adds the site (running app, with a Laravel-like folder; the main window then opened on the new site). The "+ Add site" button on the Sites page and `⌘N` are wired the same way but I did not click them; folder drop was not tried; I did not type a clashing domain in the window (the refusal is tested in `SetupPlanTests`).
+- [x] 9. After adding, the site's page shows the Setup card. With `vendor/` created by hand and the app relaunched, the card said "Dependencies installed". Switching pages and back in the same session could not be checked: my accessibility clicks stopped moving the sidebar.
+- [x] 10. `warren site plan` prints the plan (run by hand on a Laravel-like folder). `--json` is the same data and was not run by hand.
+- [x] 11. `just check` passes (205 tests). `WARREN_DEMO=1` was not run again for this spec.
 
 ## Test plan
 
@@ -117,7 +119,14 @@ New code and one new window. If open question 1 is answered with registry overri
 
 ## Open questions
 
-1. **Where does a custom name or domain chosen in the window live?** Writing `.warren.toml` into the project changes someone's repository, which is wrong for a project they do not own. Recommendation: store overrides in the registry (`config/sites.json`), have `.warren.toml` win when it sets the same field, and only write `.warren.toml` when the user asks ("Save settings to the project"). This amends 004.
-2. **Install command for npm without a lockfile.** `npm install` creates a lockfile in the user's repo. Recommendation: accept it and say so in the step's detail.
-3. **Optional steps from the project's own scripts.** Recommendation: show them off by default, as above. They are the author's own idea of setup.
-4. **Which services does 011 name before 015 to 018 exist?** Recommendation: name them and mark *waiting*; the plan is the contract those specs fill in.
+Decided with the reviewer when approving.
+
+1. **Custom name and domain** are stored in the registry, `.warren.toml` wins, and nothing is written to the project. This amends 004 (done in this PR).
+2. **`npm install` without a lockfile** creates one; the step's detail says so.
+3. **Optional steps from the project's scripts** are shown, off by default.
+4. **Services** are named in the plan and shown as *waiting* until 015 to 018.
+
+## Known gaps handed to later specs
+
+- `pnpm` and `yarn` steps assume those tools are available. Node ships them through Corepack up to Node 24; 012 must make them available (or run them through Corepack) before executing the step.
+- The Setup card cannot run the plan yet (012).

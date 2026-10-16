@@ -85,6 +85,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSPopoverDelegate {
     private func showMenu() {
         let menu = NSMenu()
         menu.addItem(withTitle: "Open Warren", action: #selector(openMain), keyEquivalent: "").target = self
+        menu.addItem(withTitle: "Add site…", action: #selector(openAddSite), keyEquivalent: "").target = self
         menu.addItem(withTitle: "Set up Warren…", action: #selector(openSetup), keyEquivalent: "").target = self
         menu.addItem(.separator())
         menu.addItem(withTitle: "Quit Warren", action: #selector(NSApplication.terminate(_:)), keyEquivalent: "q")
@@ -95,6 +96,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSPopoverDelegate {
 
     @objc private func openMain() {
         windows.openMain()
+    }
+
+    @objc private func openAddSite() {
+        windows.openAddSite()
     }
 
     @objc private func openSetup() {
