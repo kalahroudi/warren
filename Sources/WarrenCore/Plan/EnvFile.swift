@@ -44,6 +44,28 @@ struct EnvFile: Equatable, Sendable {
         variables.filter(\.value.isEmpty).map(\.key)
     }
 
+    /// Keys a person still has to fill in: empty, or a placeholder such as `YOUR_KEY` or `<token>`.
+    var unsetKeys: [String] {
+        variables.filter { $0.value.isEmpty || Self.isPlaceholder($0.value) }.map(\.key)
+    }
+
+    /// Example values that stand in for a real one. Real defaults (`password`, `localhost`) are not placeholders.
+    static func isPlaceholder(_ value: String) -> Bool {
+        let text = value.lowercased().trimmingCharacters(in: .whitespaces)
+        if text.isEmpty {
+            return true
+        }
+        if text.hasPrefix("<"), text.hasSuffix(">") {
+            return true
+        }
+        if text.hasPrefix("your_") || text.hasPrefix("your-") || text.hasPrefix("your ") {
+            return true
+        }
+        return ["changeme", "change_me", "change-me", "replace_me", "replace-me", "todo", "xxx"]
+            .contains { text.contains($0) }
+            || text.contains("xxxxxxxx")
+    }
+
     /// Strips quotes and a trailing ` # comment` from an unquoted value.
     private static func value(_ raw: String) -> String {
         let text = raw.trimmingCharacters(in: .whitespaces)

@@ -54,7 +54,15 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSPopoverDelegate {
         popover.animates = true
         popover.delegate = self
 
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.6) { [weak self] in self?.openSetupIfNeeded() }
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.6) { [weak self] in
+            // WARREN_OPEN=main|add|setup opens that window at launch, for demos and tests.
+            switch ProcessInfo.processInfo.environment["WARREN_OPEN"] {
+            case "main": self?.windows.openMain()
+            case "add": self?.windows.openAddSite()
+            case "setup": self?.windows.openSetup()
+            default: self?.openSetupIfNeeded()
+            }
+        }
     }
 
     /// On first launch, and until the user closes it unfinished, the wizard opens by itself.

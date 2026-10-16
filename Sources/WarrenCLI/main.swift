@@ -14,6 +14,8 @@ usage: warren <command>
   site setup <id> [--yes]      run the setup plan (asks before running project code)
   site new <template> <name>   create a project from a template or --blank <kind> (see: warren template list)
   template list [--json]       the starters Warren can create
+  site clone <repo> [name]     clone a repository as a site (see: warren site clone)
+  repo list [--json]           your GitHub repositories (needs the gh CLI)
   site remove <id>             unregister a site (never deletes files)
   proxy <command>              local HTTPS proxy (see: warren proxy)
   dns <command>                local DNS for your domains (see: warren dns)
@@ -157,6 +159,18 @@ func runSite(_ arguments: [String], registry: SiteRegistry) throws {
 let arguments = Array(CommandLine.arguments.dropFirst())
 switch arguments.first {
 case "--version": print("warren \(Warren.version)")
+case "repo" where arguments.dropFirst().first == "list":
+    do {
+        try listRepositories(json: arguments.contains("--json"))
+    } catch {
+        fail(error.localizedDescription)
+    }
+case "site" where arguments.dropFirst().first == "clone":
+    do {
+        try await cloneRepository(Array(arguments.dropFirst(2)), paths: .fromEnvironment())
+    } catch {
+        fail(error.localizedDescription)
+    }
 case "template":
     if arguments.dropFirst().first == "list" {
         listTemplates(json: arguments.contains("--json"))

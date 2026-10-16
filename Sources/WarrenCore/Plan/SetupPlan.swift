@@ -3,7 +3,8 @@
 import Foundation
 
 public enum PlanStepKind: String, Codable, Sendable {
-    case runtime, packageManager, scaffold, dependencies, envFile, service, application, database, optional, site
+    case runtime, packageManager, scaffold, clone, dependencies, envFile, envValues, service, application, database,
+         optional, site
 }
 
 public enum PlanStepState: Equatable, Codable, Sendable {
@@ -32,6 +33,11 @@ public struct PlanStep: Identifiable, Equatable, Codable, Sendable {
     public let enabledByDefault: Bool
     /// What a step Warren performs itself needs to know, such as the tool and version to install.
     public var payload: [String: String] = [:]
+
+    /// What a remembered run is compared with: the command, or for the values step its fixed word and the names asked.
+    var memoryCommand: [String]? {
+        kind == .envValues ? ["env-values"] + (payload["names"] ?? "").split(separator: ",").map(String.init) : command
+    }
 
     public var commandLine: String? {
         command?.map { $0.contains(" ") ? "\"\($0)\"" : $0 }.joined(separator: " ")

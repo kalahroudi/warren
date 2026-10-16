@@ -131,3 +131,18 @@ extension SetupPlanner {
         )
     }
 }
+
+extension SetupPlanner {
+    /// Asks for the variables `.env` (or its example) leaves empty. *Done* once the user has answered for exactly
+    /// this list, even by skipping, so it does not come back; a new empty variable asks again.
+    func envValuesStep(_ info: EnvInfo, waitsFor: [String]) -> PlanStep? {
+        let names = EnvPrompts.prompts(current: info.current, example: info.example?.file).map(\.name)
+        guard !names.isEmpty else { return nil }
+        let shown = names.prefix(4).joined(separator: ", ") + (names.count > 4 ? " and \(names.count - 4) more" : "")
+        return PlanStep(
+            id: "env-values", kind: .envValues, title: "Fill in .env values",
+            detail: "\(names.count) empty: \(shown). You can skip any of them.", command: nil, runsProjectCode: false,
+            state: .todo, waitsFor: waitsFor, enabledByDefault: true, payload: ["names": names.joined(separator: ",")]
+        )
+    }
+}

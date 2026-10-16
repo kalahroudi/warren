@@ -72,6 +72,8 @@ public struct PlanApproval: Sendable {
 public struct PlanRunner: Sendable {
     public typealias Approval = @Sendable ([PlanStep]) async -> PlanApproval
     public typealias Events = @Sendable (PlanRunEvent) -> Void
+    /// Answers for the variables `.env` leaves empty: name to value. Variables left out stay empty.
+    public typealias Values = @Sendable ([EnvPrompt]) async -> [String: String]
 
     public let paths: WarrenPaths
     public let site: ResolvedSite
@@ -110,7 +112,8 @@ public struct PlanRunner: Sendable {
 
     @discardableResult
     public func run(
-        plan: SetupPlan, optional: Set<String> = [], approve: Approval, onEvent: @escaping Events
+        plan: SetupPlan, optional: Set<String> = [], approve: Approval,
+        values: @escaping Values = { _ in [:] }, onEvent: @escaping Events
     ) async -> RunSummary {
         let selected = Self.selectedSteps(plan, optional: optional)
         let approved = await approvedSteps(selected.filter(\.runsProjectCode), approve: approve)
@@ -137,7 +140,7 @@ public struct PlanRunner: Sendable {
                 continue
             }
             onEvent(.stepStarted(step.id))
-            await finish(step, perform(step, plan: plan, onEvent: onEvent))
+            await finish(step, perform(step, plan: plan, values: values, onEvent: onEvent))
         }
         let summary = RunSummary(order: order, results: results, cancelled: Task.isCancelled)
         onEvent(.finished(summary))
@@ -166,7 +169,9 @@ public struct PlanRunner: Sendable {
 
     // MARK: Performing a step
 
-    private func perform(_ step: PlanStep, plan: SetupPlan, onEvent: @escaping Events) async -> StepResult {
+    private func perform(_ step: PlanStep, plan: SetupPlan, values: Values,
+                         onEvent: @escaping Events) async -> StepResult
+    {
         let log = StepLog(paths: paths, site: site.id, step: step.id)
         let tail = LineTail(limit: 20)
         let emit: @Sendable (String) -> Void = { line in
@@ -180,6 +185,7 @@ public struct PlanRunner: Sendable {
             case .runtime: try await installRuntime(step, plan: plan, emit: emit)
             case .packageManager: try await installTool(step, emit: emit)
             case .envFile: try copyEnvFile(plan: plan, emit: emit)
+            case .envValues: try await fillEnvValues(step, plan: plan, values: values, emit: emit)
             case .application where step.command == nil: try createSQLiteFile(emit: emit)
             default:
                 guard let command = step.command else { return .skipped("nothing to run") }
@@ -234,6 +240,29 @@ public struct PlanRunner: Sendable {
         }
     }
 
+    /// Asks for the empty variables, writes the answers into `.env`, and remembers that it asked. Neither the values
+    /// nor
+    /// anything derived from them is logged or reported; only how many were saved.
+    private func fillEnvValues(
+        _ step: PlanStep, plan: SetupPlan, values: Values, emit: @Sendable (String) -> Void
+    ) async throws {
+        let target = directory.appendingPathComponent(".env")
+        let source = FileManager.default.fileExists(atPath: target.path)
+            ? EnvFile(contentsOf: target) : plan.env.example
+            .map { EnvFile(contentsOf: directory.appendingPathComponent($0)) }
+        let names = Set((step.payload["names"] ?? "").split(separator: ",").map(String.init))
+        let prompts = source.map { EnvPrompts.prompts(for: $0).filter { names.contains($0.name) } } ?? []
+        let answers = prompts.isEmpty ? [:] : await values(prompts)
+        let allowed = answers.filter { names.contains($0.key) }
+        let saved = try allowed.isEmpty ? [] : EnvEditor.apply(allowed, to: target)
+        emit(saved
+            .isEmpty ? "No values entered; placeholders kept" :
+            "Saved \(saved.count) value\(saved.count == 1 ? "" : "s") to .env")
+        if let command = step.memoryCommand {
+            try? SetupRunStore(paths: paths).record(site: site.id, step: step.id, command: command)
+        }
+    }
+
     private func createSQLiteFile(emit: @Sendable (String) -> Void) throws {
         let file = directory.appendingPathComponent("database/database.sqlite")
         try FileManager.default.createDirectory(at: file.deletingLastPathComponent(), withIntermediateDirectories: true)
@@ -276,6 +305,9 @@ public struct PlanRunner: Sendable {
     /// A plain next action for failures that look familiar.
     public static func advice(forFailureLines lines: [String], exitCode: Int32) -> String? {
         let text = lines.joined(separator: "\n").lowercased()
+        if lines.contains(where: { $0.hasPrefix("$ /usr/bin/git") }) {
+            return GitTool.explain(lines.joined(separator: "\n"))
+        }
         if exitCode == 127 || text.contains("command not found") || text.contains("was not found") {
             return "A tool this step needs is not installed. Run the earlier steps first, or install it."
         }
