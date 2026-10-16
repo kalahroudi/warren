@@ -9,10 +9,11 @@ usage: warren <command>
   site add <path>              register a folder as a site
   site list [--json]           list registered sites
   site show <id> [--json]      show one site's resolved settings
+  site detect <site or folder> [--json]  what the project is and how it starts
   site remove <id>             unregister a site (never deletes files)
   proxy <command>              local HTTPS proxy (see: warren proxy)
   dns <command>                local DNS for your domains (see: warren dns)
-  runtime <command>            Node and Bun versions (see: warren runtime)
+  runtime <command>            Node, Bun, PHP and Python versions (see: warren runtime)
   setup status                 which setup steps are done
   --version                    print the version
 
@@ -42,6 +43,31 @@ func describe(_ site: ResolvedSite) {
     }
 }
 
+/// A registered site's id, or a folder.
+func detect(_ target: String, registry: SiteRegistry) throws -> FrameworkDetection {
+    if let site = try? registry.show(id: target) {
+        return FrameworkDetector.detect(site: site)
+    }
+    var isDirectory: ObjCBool = false
+    guard FileManager.default.fileExists(atPath: target, isDirectory: &isDirectory), isDirectory.boolValue else {
+        throw CLIError("'\(target)' is neither a registered site nor a folder")
+    }
+    let directory = URL(fileURLWithPath: target, isDirectory: true).standardizedFileURL
+    let config = try? ProjectConfig.load(from: directory)
+    return FrameworkDetector.detect(in: directory, command: config?.command, domains: config?.domains ?? [])
+}
+
+func describe(_ detection: FrameworkDetection) {
+    print("  framework: \(detection.displayName)")
+    print("  starts with: \(detection.startLine)")
+    if let manager = detection.packageManager {
+        print("  package manager: \(manager.rawValue)")
+    }
+    for note in detection.notes {
+        print("  note: \(note)")
+    }
+}
+
 func runSite(_ arguments: [String], registry: SiteRegistry) throws {
     let json = arguments.contains("--json")
     let rest = arguments.filter { $0 != "--json" }
@@ -65,6 +91,14 @@ func runSite(_ arguments: [String], registry: SiteRegistry) throws {
             printJSON(site)
         } else {
             describe(site)
+            describe(FrameworkDetector.detect(site: site))
+        }
+    case let ("detect", target?):
+        let detection = try detect(target, registry: registry)
+        if json {
+            printJSON(detection)
+        } else {
+            describe(detection)
         }
     case let ("remove", id?):
         try registry.remove(id: id)

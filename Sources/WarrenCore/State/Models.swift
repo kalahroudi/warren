@@ -15,6 +15,8 @@ public struct Site: Identifiable, Hashable, Sendable {
     public let path: String
     public var state: RunState
     public let relayURL: String?
+    /// How the site is started or served, from framework detection. Empty when unknown.
+    public var startLine = ""
 }
 
 public struct Service: Identifiable, Hashable, Sendable {
