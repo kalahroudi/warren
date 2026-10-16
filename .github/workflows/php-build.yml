@@ -82,6 +82,6 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           tag="php-${{ steps.package.outputs.version }}"
-          gh release view "$tag" >/dev/null 2>&1 || gh release create "$tag" --title "PHP ${{ steps.package.outputs.version }}" \
+          gh release view "$tag" >/dev/null 2>&1 || gh release create "$tag" --prerelease --title "PHP ${{ steps.package.outputs.version }}" \
             --notes "Static PHP ${{ steps.package.outputs.version }} (cli and fpm) built with static-php-cli ${SPC_VERSION} for Warren. See specs/008-php-runtime.md."
           gh release upload "$tag" "${{ steps.package.outputs.name }}" --clobber

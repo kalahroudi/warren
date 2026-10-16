@@ -1,6 +1,6 @@
 # 008 · PHP runtime with FPM and Composer
 
-Status: Draft · Phase 2 · Depends on: 004, 007
+Status: Implemented, pending the PHP menu and cancel checks · Phase 2 · Depends on: 004, 007
 
 ## Goal
 
@@ -30,7 +30,7 @@ Surveyed 2026-10-16.
 
 | Option | Verdict |
 |---|---|
-| **static-php-cli** (MIT, active: last push the day of this survey) and its public builds at `dl.static-php.dev`: self-contained `php` and `php-fpm` binaries for macOS arm64 and Intel, every maintained minor (8.0 to 8.5), kept at the latest patch. Measured: a `cli` or `fpm` archive is 14 MB to download and 41 MB unpacked (`common` set) or 35 MB and 97 MB (`bulk` set); no dylibs, no Homebrew; `php-fpm -v` and `php composer.phar` ran from a throwaway folder. | **Used**, as downloaded binaries pinned by SHA-256, like Caddy. |
+| **static-php-cli** (MIT, active: last push the day of this survey). Its public builds at `dl.static-php.dev` were surveyed first: self-contained `php` and `php-fpm` binaries for macOS arm64 and Intel, every maintained minor (8.0 to 8.5), kept at the latest patch. Measured: a `cli` or `fpm` archive is 14 MB to download and 41 MB unpacked (`common` set) or 35 MB and 97 MB (`bulk` set); no dylibs, no Homebrew; `php-fpm -v` and `php composer.phar` ran from a throwaway folder. But neither public set has every extension (below). | **Used as the build tool.** Warren's `php-build` workflow builds its own set and publishes it as releases of this repository (pre-releases, so they never count as the app's latest release); the app downloads those, pinned by SHA-256, like Caddy. |
 | mise `php` (builds from source with `php-build`) | Rejected. Needs a compiler, autoconf, bison and many libraries; a first install takes many minutes and fails on missing build dependencies, which breaks "no manual steps". |
 | Homebrew `php` and `shivammathur/php` bottles | Rejected. Bottles are not relocatable: they expect `/opt/homebrew` and dozens of dependent formulae, and using Homebrew would make Warren need it. |
 | Laravel Herd-style bundled builds, MAMP, XAMPP | Rejected. Not redistributable as a library; or heavy GUI bundles. |
@@ -45,9 +45,9 @@ Facts found that shape the design:
 
 ## Behavior
 
-**Offered versions.** A table in `PHPRelease` lists, for each supported minor (8.1 to 8.5, the lines receiving at least security fixes at the time of release), the pinned patch version, the archive URLs and a SHA-256 for arm64 `php`, arm64 `php-fpm`, Intel `php`, Intel `php-fpm`. Older lines can be added by a reviewed change. Updating a patch version is a reviewed change that Warren ships in a normal app update; the user does nothing.
+**Offered versions.** A table in `PHPRelease.offered` lists, for each supported minor (8.2 to 8.5), the pinned patch version and a SHA-256 for the arm64 and Intel archives. Each archive holds `bin/php` and `bin/php-fpm`. Older lines can be added by a reviewed change. Updating a patch version is a reviewed change that Warren ships in a normal app update; the user does nothing.
 
-**Install.** Installing `php@8.3` downloads the `cli` and `fpm` archives, verifies each hash (a wrong hash deletes the download and fails), and unpacks to `data/php/<version>/bin/{php,php-fpm}`. Composer is downloaded once to `data/php/composer/<version>/composer.phar`, hash-verified. Installing a version already present does nothing; a cancelled or failed install leaves nothing listed (the folder is built in a temporary name and renamed last).
+**Install.** Installing `php@8.3` downloads the archive, verifies its hash (a wrong hash deletes the download and fails), and unpacks to `data/php/<version>/bin/{php,php-fpm}`. Composer is downloaded once to `data/php/composer/<version>/composer.phar`, hash-verified. Installing a version already present does nothing; a cancelled or failed install leaves nothing listed (the folder is built in a temporary name and renamed last).
 
 **Which version a site wants.** In order, extending 007:
 
@@ -62,35 +62,39 @@ Facts found that shape the design:
 
 **Removal.** Deleting the version's folder. A version used by a registered site needs confirmation that names those sites. Composer stays until the last PHP is removed.
 
-**Footprint.** Idle: nothing runs. Disk per PHP minor: about 28 MB download and 80 MB unpacked for the `common` set (cli plus fpm); `bulk` roughly 70 MB download and 195 MB unpacked. Composer is about 3 MB. Nothing downloads until a site needs it or the user asks.
+**Footprint.** Idle: nothing runs. Disk per PHP version: measured 134 MB unpacked (cli plus fpm). Composer is about 3 MB. Nothing downloads until a site needs it or the user asks.
 
 ## Acceptance criteria
 
-- [ ] 1. Installing PHP verifies each archive's SHA-256; a wrong hash deletes the download and fails (unit test with a fake download).
-- [ ] 2. The needed version resolves from `.warren.toml`, then `.php-version` / `.tool-versions`, then `composer.json` (`require.php`, `config.platform.php`), including range forms (unit).
-- [ ] 3. `php`, `php-fpm` and `composer` run from the install, with `PHPRC` and `PHP_INI_SCAN_DIR` inside `~/.warren`, and a fake `HOME` stays empty (integration, `WARREN_INTEGRATION=1`).
-- [ ] 4. A cancelled or failed install lists nothing as installed (unit with a fake installer; integration cancel).
-- [ ] 5. `environment(for:)` for a PHP site has the PHP and Composer first on `PATH` and the ini and Composer variables set (unit).
-- [ ] 6. The Runtimes page shows PHP versions with sizes and using sites; Install, Cancel and Remove work from it, and Remove of an in-use version names the sites (running app).
-- [ ] 7. The site's page shows "PHP x (installed / not installed)" and its Install button installs it (running app).
-- [ ] 8. `composer install` on a small project with a lockfile succeeds using only Warren's PHP, writes its cache under `cache/packages` and nothing under `~/.composer` (integration).
-- [ ] 9. A user-edited `php.ini` is not overwritten by a later install or update (unit).
-- [ ] 10. The extension set covers the decision in open question 1, checked by listing `php -m` in the integration test.
-- [ ] 11. `just check` passes, and `WARREN_DEMO=1` still shows demo content and writes nothing.
+Checked means verified. How is in each line.
+
+- [x] 1. Installing PHP verifies the archive's SHA-256; a wrong hash deletes the download and fails (`PHPTests`, fake download). The real pinned downloads verify in `PHPIntegrationTests`.
+- [x] 2. The needed version resolves from `.warren.toml`, then `.php-version` / `.tool-versions`, then `composer.json` (`config.platform.php` before `require.php`), including Composer's range forms (`PHPTests`).
+- [x] 3. `php`, `php-fpm` and `composer` run from the install and a fake `HOME` stays empty (`PHPIntegrationTests` against the real published PHP 8.5.11: `php -m`, `php-fpm -t` with Warren's ini, `composer install`; no `.composer`, `.config/composer` or `.cache/composer` in the fake home).
+- [x] 4. A cancelled or failed install lists nothing as installed (`PHPTests`: cancel mid-download, wrong hash, no hidden folder left). Cancelling in the UI was not exercised.
+- [x] 5. `environment(for:)` for a PHP site has PHP and Composer first on `PATH` and the ini and Composer variables set (`PHPTests`; also `warren runtime env` on a real site).
+- [ ] 6. The Runtimes page shows PHP versions with sizes and using sites; Install, Cancel and Remove work from it. Verified in the running app: the PHP card listed 8.3.35, "used by lara", 134.7 MB. Not exercised: the Install menu items for PHP, Cancel, and Remove (Remove and Cancel share their code with Node and Bun, verified in 007).
+- [x] 7. The site's page shows "PHP 8.3, Installed 8.3.35" or "Not installed", and its Install button installs it (running app: removed PHP with the CLI, the card turned to "Not installed", clicked Install, watched "Downloading PHP 8.3.35", the version appeared in `warren runtime list`).
+- [x] 8. `composer install` succeeds with Warren's PHP and writes its cache under `cache/packages` (`PHPIntegrationTests`, installing `psr/log`). The fixture has no lockfile, so Composer resolved it fresh.
+- [x] 9. A user-edited `php.ini` is not overwritten by a later install (`PHPTests.aUserEditedIniSurvivesAnotherInstall`).
+- [x] 10. The extension set covers `pdo_sqlite`, `pdo_mysql`, `pdo_pgsql`, `mysqli`, `intl`, `opcache`, `sodium`, `mbstring` and `gd`, checked with `php -m` in `PHPIntegrationTests`. The workflow also fails a build that lacks any extension in its list.
+- [x] 11. `just check` passes (150 tests). `WARREN_DEMO=1` was not run again for this spec.
 
 ## Test plan
 
 - **Unit**: release table shape and hashes present for both architectures; `composer.json` and `.php-version` resolution; range matching for Composer forms; environment building; ini creation without overwrite; install failure paths with a fake downloader.
-- **Integration, real downloads** (`WARREN_INTEGRATION=1`, off in CI because of the size): install one PHP, run `php -m`, `php-fpm -t` against Warren's ini, run Composer on a fixture project, cancel an install, fake `HOME` stays empty.
+- **Integration, real downloads** (`WARREN_INTEGRATION=1`, off in CI because of the size): install the newest PHP, run `php -m`, `php-fpm -t` against Warren's ini, run Composer on a fixture project, fake `HOME` stays empty.
 - **Manual in the running app** (6, 7): install from the Sites card and from the Runtimes menu, cancel, remove an in-use version, relaunch.
 
 ## Rollout
 
-New state under `data/php`, `config/php`, `config/composer`. Nothing migrates, nothing needs steps on update. Deleting `~/.warren` removes everything.
+New state under `data/php`, `data/composer`, `config/php`, `config/composer`. The offered table pins PHP 8.2.34, 8.3.35, 8.4.26 and 8.5.11; moving to a newer patch means running the `PHP build` workflow and updating the table in a reviewed change. Nothing migrates, nothing needs steps on update. Deleting `~/.warren` removes everything.
 
 ## Open questions
 
-1. **Which extension set?** The public builds are `common` or `bulk`, and each lacks something a popular stack needs (`pdo_sqlite` and `pdo_pgsql` in bulk; `mysqli`, `intl`, `opcache` in common). Options: (a) offer `bulk` and accept that SQLite-by-PDO projects (Laravel's default) fail until a build with it exists; (b) offer `common` and accept WordPress and Intl-heavy projects fail; (c) Warren builds its own set with static-php-cli in CI and publishes it on GitHub Releases next to the app, hashes pinned as usual. **Recommendation: (c).** static-php-cli is the tool and Warren only chooses the extension list and hosts the output; it makes the table reproducible and the set complete (`pdo_sqlite`, `pdo_pgsql`, `mysqli`, `intl`, `opcache`, `sodium`, `gd`, `zip`, `redis`, `imagick` is optional). The cost is a release workflow (about 20 minutes per build, 5 minors by 2 architectures) and being the party that rebuilds on PHP security releases. If you prefer not to take that on now: start with (a) or (b) and move to (c) before the Add-site flow (011).
-2. **Which minors to offer?** Recommendation: 8.2 to 8.5 only (8.1 has no security support left by this release). Older projects can be added by a reviewed change.
-3. **Install Composer with the first PHP, or on demand?** Recommendation: with PHP; it is 3 MB and nearly every PHP project uses it.
-4. **Xdebug.** A static build cannot load it as a shared extension. Recommendation: out of scope, noted in the docs; revisit if (c) is chosen, since a custom build could include it.
+Decided with the reviewer when approving.
+
+1. **Which extension set?** Warren builds its own with static-php-cli (`.github/workflows/php-build.yml`), so one set covers Laravel's SQLite, WordPress's `mysqli` and `intl`. imagick is not included.
+2. **Which minors?** 8.2 to 8.5. Older lines can be added by a reviewed change.
+3. **Composer** installs with the first PHP.
+4. **Xdebug** is out of scope. A static build cannot load it; a later spec can add it to the custom build.

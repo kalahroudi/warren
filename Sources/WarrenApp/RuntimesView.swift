@@ -10,7 +10,7 @@ struct RuntimesView: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 18) {
             PageHeader(title: "Runtimes",
-                       subtitle: "Per-site versions, picked up from .nvmrc, package.json and friends.",
+                       subtitle: "Per-site versions, picked up from .nvmrc, package.json, composer.json and friends.",
                        preview: model.snapshot.previewSections.contains("Runtimes"))
             if model.snapshot.isLive {
                 InstalledRuntimesView(runtimes: runtimes)

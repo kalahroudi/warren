@@ -49,5 +49,26 @@ public struct ComposerRelease: Equatable, Sendable {
 
 public extension PHPRelease {
     /// The PHP lines Warren offers, newest patch of each minor. PHP 8.1 no longer receives security fixes.
-    static let offered: [PHPRelease] = []
+    static let offered: [PHPRelease] = [
+        .pinned(
+            "8.2.34",
+            arm64: "0dea9a5afebb7747fff7f6076c720dbee21e161210cd3c9af05353157191cead",
+            intel: "086618d7ace4444ce79699d721410325e2b8b09de8452b21f24fa4edbacea350"
+        ),
+        .pinned(
+            "8.3.35",
+            arm64: "dbd69aaf5c73aa2ed5c2c10e30a94f82575f2a37d3c2b78c2cc3c5cad3177e0d",
+            intel: "cd32de5b0d6c3e0c906ae719f27d7fb32e9acadd7955bbadb2662037ed2a3533"
+        ),
+        .pinned(
+            "8.4.26",
+            arm64: "8ec44e3b8e2b72b17e4c1310932a053e13d3e7ecfe50ac80b9f219fafea24703",
+            intel: "7994aacc35f133cf55b08c0a00085d3e4b84bf48424d62adfc69824384ba1832"
+        ),
+        .pinned(
+            "8.5.11",
+            arm64: "fab6ca5e1a7f5de111372863a740696f61b9874cac55efe778db56b9405a2371",
+            intel: "dfbad901dbe6aae6fab96b190ca3481e8e83f3436fed1a44ca157e04350dd1fa"
+        ),
+    ]
 }
