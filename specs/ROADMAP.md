@@ -49,8 +49,11 @@ One row is one spec is one PR. Mockup: https://claude.ai/artifact/QdJZC1qARd8Sbc
 | 042 | MCP database tools: schema and read queries open, writes ask first | 9 Database tools |
 | 043 | Background proxy and DNS (launchd) and real state in the app | 1 Core |
 | 044 | Setup wizard: first-run setup from the app, no terminal | 1 Core |
+| 045 | App catalog: browse and start from ready-made apps (Next.js and other starters), as data | 3 Add site |
 
 ## Notes
+
+- **App catalog (045).** A browsable catalog of starter apps (for example the Next.js starters and templates Vercel publishes, Laravel and Vite starters, WordPress) shown in the Add-site flow, with search and categories. Entries are data in the repo, like the service catalog (018), not code: each names the source repo or template, the runtime it needs, the services it wants and the commands to set it up. It builds on 011 and 012, and replaces the fixed template list in 013, which then covers only blank projects. Before writing the spec, survey existing sources (Vercel's template gallery, `create-next-app`, `giget` and `degit` for fetching a template, framework starter lists) and reuse them instead of keeping our own copies. Starters come from repos the user did not write, so running their setup commands needs the per-command consent from 000.
 
 - **Build order change.** 043 and 044 come right after 006 and before 007. Specs 004 to 006 built the engine and a CLI. Until 043 and 044 land, a user cannot actually use them from the app. Everything after that should arrive with its app surface (see the *App first* principle in 000).
 - 025 and 026 implement the same `ShareProvider` in two modes: **hosted** (uses the Warren API) and **self-hosted** (user's own Relay server, or their own Cloudflare account directly). The app has one setting: *Relay endpoint*.
