@@ -1,0 +1,85 @@
+# SPDX-License-Identifier: Apache-2.0
+#
+# Builds the static PHP that Warren downloads (spec 008) with static-php-cli, then publishes it as a release.
+# Pull requests that touch this file build one cell without publishing. A manual run builds and publishes
+# every supported minor for both architectures, and prints the SHA-256 lines to pin in PHPRelease.swift.
+name: PHP build
+
+on:
+  workflow_dispatch:
+  pull_request:
+    paths: [.github/workflows/php-build.yml]
+
+env:
+  SPC_VERSION: "2.8.5"
+  EXTENSIONS: >-
+    apcu,bcmath,bz2,calendar,ctype,curl,dom,exif,fileinfo,filter,ftp,gd,gmp,iconv,intl,mbregex,mbstring,mysqli,
+    mysqlnd,opcache,openssl,pcntl,pdo,pdo_mysql,pdo_pgsql,pdo_sqlite,pgsql,phar,posix,readline,redis,session,
+    simplexml,soap,sockets,sodium,sqlite3,tokenizer,xml,xmlreader,xmlwriter,xsl,zip,zlib
+
+jobs:
+  build:
+    strategy:
+      fail-fast: false
+      matrix:
+        include: ${{ fromJSON(github.event_name == 'workflow_dispatch'
+          && '[{"php":"8.2","runner":"macos-15","arch":"aarch64","spc":"acf2f25d56d0cbf8e65aa82e5054fef555f7be7c5c38046c6e0819f266d83225"},{"php":"8.3","runner":"macos-15","arch":"aarch64","spc":"acf2f25d56d0cbf8e65aa82e5054fef555f7be7c5c38046c6e0819f266d83225"},{"php":"8.4","runner":"macos-15","arch":"aarch64","spc":"acf2f25d56d0cbf8e65aa82e5054fef555f7be7c5c38046c6e0819f266d83225"},{"php":"8.5","runner":"macos-15","arch":"aarch64","spc":"acf2f25d56d0cbf8e65aa82e5054fef555f7be7c5c38046c6e0819f266d83225"},{"php":"8.2","runner":"macos-15-intel","arch":"x86_64","spc":"e8b798048f62ca4960764196543b60ae703f7174aa418824cf542aeec1d2cd6a"},{"php":"8.3","runner":"macos-15-intel","arch":"x86_64","spc":"e8b798048f62ca4960764196543b60ae703f7174aa418824cf542aeec1d2cd6a"},{"php":"8.4","runner":"macos-15-intel","arch":"x86_64","spc":"e8b798048f62ca4960764196543b60ae703f7174aa418824cf542aeec1d2cd6a"},{"php":"8.5","runner":"macos-15-intel","arch":"x86_64","spc":"e8b798048f62ca4960764196543b60ae703f7174aa418824cf542aeec1d2cd6a"}]'
+          || '[{"php":"8.4","runner":"macos-15","arch":"aarch64","spc":"acf2f25d56d0cbf8e65aa82e5054fef555f7be7c5c38046c6e0819f266d83225"}]') }}
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 90
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Fetch static-php-cli
+        run: |
+          curl -fsSL -o spc.tar.gz "https://github.com/crazywhalecc/static-php-cli/releases/download/${SPC_VERSION}/spc-macos-${{ matrix.arch }}.tar.gz"
+          echo "${{ matrix.spc }}  spc.tar.gz" | shasum -a 256 -c -
+          tar -xzf spc.tar.gz
+          chmod +x spc
+
+      - name: Build tools
+        run: ./spc doctor --auto-fix
+
+      - name: Download sources
+        run: ./spc download --for-extensions="$EXTENSIONS" --with-php=${{ matrix.php }} --prefer-pre-built --retry=3
+
+      - name: Build
+        run: ./spc build "$EXTENSIONS" --build-cli --build-fpm --enable-zts=false 2>/dev/null || ./spc build "$EXTENSIONS" --build-cli --build-fpm
+
+      - name: Check and package
+        id: package
+        run: |
+          set -e
+          php=buildroot/bin/php
+          fpm=buildroot/bin/php-fpm
+          version=$($php -r 'echo PHP_VERSION;')
+          echo "Built PHP $version"
+          $php -m
+          $fpm -v
+          for ext in $(echo "$EXTENSIONS" | tr -d ' \n' | tr ',' ' '); do
+            case "$ext" in
+              mbregex) continue ;;
+              opcache) $php -m | grep -qi '^zend opcache$' || { echo "missing opcache"; exit 1; } ;;
+              *) $php -m | grep -qix "$ext" || { echo "missing extension $ext"; exit 1; } ;;
+            esac
+          done
+          mkdir -p dist/bin
+          cp $php $fpm dist/bin/
+          name="warren-php-${version}-macos-${{ matrix.arch }}.tar.gz"
+          tar -czf "$name" -C dist bin
+          sum=$(shasum -a 256 "$name" | cut -d' ' -f1)
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+          echo "name=$name" >> "$GITHUB_OUTPUT"
+          echo "$sum  $name" | tee -a "$GITHUB_STEP_SUMMARY"
+
+      - name: Publish release asset
+        if: github.event_name == 'workflow_dispatch'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          tag="php-${{ steps.package.outputs.version }}"
+          gh release view "$tag" >/dev/null 2>&1 || gh release create "$tag" --title "PHP ${{ steps.package.outputs.version }}" \
+            --notes "Static PHP ${{ steps.package.outputs.version }} (cli and fpm) built with static-php-cli ${SPC_VERSION} for Warren. See specs/008-php-runtime.md."
+          gh release upload "$tag" "${{ steps.package.outputs.name }}" --clobber
