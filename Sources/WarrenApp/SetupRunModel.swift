@@ -48,8 +48,9 @@ final class SetupRunModel: ObservableObject {
         siteID == id && !steps.isEmpty
     }
 
-    /// Starts a run for a registered site, planning from the machine as it is now.
-    func start(siteID id: String, optional: Set<String> = []) {
+    /// Starts a run for a registered site, planning from the machine as it is now. For a new project made from a
+    /// template, the scaffolder runs first and the project's normal plan follows once it has finished.
+    func start(siteID id: String, template: ProjectTemplate? = nil, optional: Set<String> = []) {
         guard enabled, !running else { return }
         siteID = id
         steps = []
@@ -58,25 +59,19 @@ final class SetupRunModel: ObservableObject {
         running = true
         let paths = paths
         task = Task { [weak self] in
-            guard let prepared = await Task.detached(operation: { Self.prepare(id, paths: paths) }).value else {
+            guard let prepared = await Task.detached(operation: { Self.prepare(id, template: template, paths: paths) })
+                .value
+            else {
                 self?.running = false
                 return
             }
             guard let self else { return }
-            steps = PlanRunner.selectedSteps(prepared.plan, optional: optional)
-            progress = Dictionary(uniqueKeysWithValues: steps.map { ($0.id, StepProgress()) })
-            let runner = PlanRunner(paths: paths, site: prepared.site)
-            let folder = prepared.site.path
-            let result = await runner.run(plan: prepared.plan, optional: optional, approve: { [weak self] risky in
-                await withCheckedContinuation { continuation in
-                    Task { @MainActor in
-                        guard let self else { return continuation.resume(returning: .none) }
-                        self.pendingApproval = PendingApproval(steps: risky, folder: folder, continuation: continuation)
-                    }
-                }
-            }, onEvent: { [weak self] event in
-                Task { @MainActor in self?.apply(event) }
-            })
+            var result = await execute(prepared.plan, site: prepared.site, optional: optional)
+            if template != nil, result.succeeded,
+               let next = await Task.detached(operation: { Self.prepare(id, template: nil, paths: paths) }).value
+            {
+                result = await execute(next.plan, site: next.site, optional: [])
+            }
             summary = result
             running = false
             loadTrust(id)
@@ -84,14 +79,39 @@ final class SetupRunModel: ObservableObject {
         }
     }
 
-    private nonisolated static func prepare(_ id: String,
-                                            paths: WarrenPaths) -> (site: ResolvedSite, plan: SetupPlan)?
-    {
+    /// Runs one plan, showing its steps and progress.
+    private func execute(_ plan: SetupPlan, site: ResolvedSite, optional: Set<String>) async -> RunSummary {
+        steps = PlanRunner.selectedSteps(plan, optional: optional)
+        progress = Dictionary(uniqueKeysWithValues: steps.map { ($0.id, StepProgress()) })
+        let folder = site.path
+        return await PlanRunner(paths: paths, site: site).run(
+            plan: plan,
+            optional: optional,
+            approve: { [weak self] risky in
+                await withCheckedContinuation { continuation in
+                    Task { @MainActor in
+                        guard let self else { return continuation.resume(returning: .none) }
+                        self.pendingApproval = PendingApproval(steps: risky, folder: folder, continuation: continuation)
+                    }
+                }
+            },
+            onEvent: { [weak self] event in
+                Task { @MainActor in self?.apply(event) }
+            }
+        )
+    }
+
+    private nonisolated static func prepare(
+        _ id: String, template: ProjectTemplate?, paths: WarrenPaths
+    ) -> (site: ResolvedSite, plan: SetupPlan)? {
         guard let site = try? SiteRegistry(paths: paths).show(id: id) else { return nil }
         let manager = RuntimeManager(paths: paths)
+        let inventory = (try? manager.inventory()) ?? []
+        if let template {
+            return (site, TemplatePlanner.plan(template, site: site, inventory: inventory))
+        }
         let plan = SetupPlanner(paths: paths).plan(
-            for: site, registered: true, inventory: (try? manager.inventory()) ?? [],
-            tools: (try? manager.installedTools()) ?? []
+            for: site, registered: true, inventory: inventory, tools: (try? manager.installedTools()) ?? []
         )
         return (site, plan)
     }

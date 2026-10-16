@@ -5,9 +5,13 @@ import UniformTypeIdentifiers
 import WarrenCore
 
 struct AddSiteView: View {
+    enum Source { case folder, template, blank }
+
     @ObservedObject var model: AddSiteModel
+    @ObservedObject var project: NewProjectModel
     let close: () -> Void
     @State private var dropTargeted = false
+    @State private var source = Source.folder
 
     var body: some View {
         HStack(alignment: .top, spacing: 0) {
@@ -15,13 +19,17 @@ struct AddSiteView: View {
             Divider()
             VStack(alignment: .leading, spacing: 14) {
                 Text("Add a site").font(.system(size: 20, weight: .semibold))
-                if model.folder == nil {
-                    chooser
+                if source == .folder {
+                    if model.folder == nil {
+                        chooser
+                    } else {
+                        ScrollView { review.padding(.trailing, 6) }
+                    }
+                    Spacer(minLength: 0)
+                    footer
                 } else {
-                    ScrollView { review.padding(.trailing, 6) }
+                    NewProjectView(model: project, close: close)
                 }
-                Spacer(minLength: 0)
-                footer
             }
             .padding(22)
         }
@@ -34,27 +42,43 @@ struct AddSiteView: View {
 
     private var sources: some View {
         VStack(alignment: .leading, spacing: 6) {
-            source("Folder", symbol: "folder", note: nil, enabled: true)
-            source("From GitHub", symbol: "arrow.down.circle", note: "Spec 014", enabled: false)
-            source("From a template", symbol: "square.stack.3d.up", note: "Spec 013", enabled: false)
-            source("Blank project", symbol: "doc", note: "Spec 013", enabled: false)
+            source("Folder", symbol: "folder", note: nil, selected: source == .folder) { source = .folder }
+            source("From GitHub", symbol: "arrow.down.circle", note: "Spec 014", selected: false, action: nil)
+            source("From a template", symbol: "square.stack.3d.up", note: nil, selected: source == .template) {
+                source = .template
+                project.kind = .template
+                project.validate()
+            }
+            source("Blank project", symbol: "doc", note: nil, selected: source == .blank) {
+                source = .blank
+                project.kind = .blank
+                project.validate()
+            }
             Spacer()
         }
         .padding(14)
         .frame(width: 210)
     }
 
-    private func source(_ title: String, symbol: String, note: String?, enabled: Bool) -> some View {
-        HStack {
-            Label(title, systemImage: symbol).font(.system(size: 13, weight: enabled ? .semibold : .regular))
-            Spacer()
-            if let note {
-                Text(note).font(.system(size: 10.5)).foregroundStyle(.secondary)
+    private func source(
+        _ title: String, symbol: String, note: String?, selected: Bool, action: (() -> Void)?
+    ) -> some View {
+        let enabled = action != nil
+        return Button { action?() } label: {
+            HStack {
+                Label(title, systemImage: symbol).font(.system(size: 13, weight: selected ? .semibold : .regular))
+                Spacer()
+                if let note {
+                    Text(note).font(.system(size: 10.5)).foregroundStyle(.secondary)
+                }
             }
+            .padding(.horizontal, 10).padding(.vertical, 8)
+            .background(selected ? Color.warrenCard : .clear, in: RoundedRectangle(cornerRadius: 8))
+            .foregroundStyle(enabled ? .primary : .secondary)
+            .contentShape(Rectangle())
         }
-        .padding(.horizontal, 10).padding(.vertical, 8)
-        .background(enabled ? Color.warrenCard : .clear, in: RoundedRectangle(cornerRadius: 8))
-        .foregroundStyle(enabled ? .primary : .secondary)
+        .buttonStyle(.plain)
+        .disabled(!enabled)
     }
 
     // MARK: Folder chooser

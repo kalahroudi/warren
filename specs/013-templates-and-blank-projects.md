@@ -1,6 +1,6 @@
 # 013 · Templates and blank projects
 
-Status: Draft · Phase 3 · Depends on: 007 to 012
+Status: Implemented, pending the failed-scaffold check · Phase 3 · Depends on: 007 to 012
 
 ## Goal
 
@@ -44,16 +44,16 @@ Surveyed 2026-10-16.
 | **Yeoman, Plop, cookiecutter** | Rejected: a second templating system on top of the ones every framework already ships. |
 | **Writing files ourselves** | Only for blank projects, where nothing existing does the job: a handful of files per runtime, each under thirty lines. |
 
-Commands, each to be confirmed by running it non-interactively with Warren's own runtime during the build (flags change between versions, so each is a table row with a test and a recorded run):
+Commands, each confirmed by running it with Warren's own runtimes in `TemplateIntegrationTests` (flags change between versions, so each is a table row with a test). Two needed more than the first guess: `sv create` waits on an add-ons prompt and then exits 0 having created nothing unless given `--no-add-ons`, and `composer create-project --no-install` still runs the post-create script `php artisan key:generate`, which fails without `vendor/`, unless given `--no-scripts`. `uvx` is not in the uv archive Warren installs, so `uv tool run` stands in:
 
 | Template | Runtime | Command, run in the new empty folder |
 |---|---|---|
 | Next.js | Node | `npx create-next-app@latest . --yes --skip-install` |
 | Vite (React, TypeScript) | Node | `npm create vite@latest . -- --template react-ts` |
 | Astro | Node | `npm create astro@latest . -- --template minimal --no-install --no-git --yes` |
-| SvelteKit | Node | `npx sv create . --template minimal --types ts --no-install` |
-| Laravel | PHP, Composer | `composer create-project laravel/laravel . --no-install --no-interaction` |
-| Django | Python, uv | `uvx --from django django-admin startproject config .` (with a `requirements.txt` containing `django` written beside it) |
+| SvelteKit | Node | `npx sv create . --template minimal --types ts --no-add-ons --no-install` |
+| Laravel | PHP, Composer | `composer create-project laravel/laravel . --no-install --no-scripts --no-interaction` |
+| Django | Python, uv | `uv tool run --from django django-admin startproject config .` (with a `requirements.txt` containing `django` written beside it first) |
 
 ## Behavior
 
@@ -78,7 +78,7 @@ A blank project skips step 3 and instead writes its files in step 1.
 
 **Folder rules.** The name becomes the folder name: letters, digits, `-`, `_` and `.`, not starting with a dot, at most 64 characters. A folder that exists must be empty (a `.DS_Store` does not count). Creation never overwrites.
 
-**Scaffold plan and the setup plan.** The scaffold plan is built by `TemplatePlanner`, a small function over the table above, and executed by the 012 runner unchanged, with one addition: a step may carry its own working folder (the runner's folder is already the project). No new execution path.
+**Scaffold plan and the setup plan.** The scaffold plan is built by `TemplatePlanner`, a small function over the table above, and executed by the 012 runner unchanged. Because the folder exists and is registered first and the scaffolders take `.` as the target, the runner's working folder is already right; no per-step working folder was needed. No new execution path.
 
 **Failure.** The step fails like any other: the card shows the last lines, the log is kept, and Run again retries. The registered site stays, so the user can retry or remove it; the folder is never deleted.
 
@@ -86,15 +86,17 @@ A blank project skips step 3 and instead writes its files in step 1.
 
 ## Acceptance criteria
 
-- [ ] 1. Name, location, domain and folder rules are enforced with a clear message for each failure (unit): invalid name, non-empty folder, clashing domain, location not writable.
-- [ ] 2. Each blank kind writes exactly its listed files and a `.warren.toml` that parses and resolves to the right runtime (unit), and the Node, Bun, PHP, Python and static files run: the Node, PHP and Python servers answer `GET /` on the port they are given (integration with real runtimes).
-- [ ] 3. Each template's command is confirmed non-interactive: it runs to completion against an empty folder with Warren's own runtimes and produces a project that detection (010) names correctly (integration, `WARREN_INTEGRATION=1`, one row per template).
-- [ ] 4. The scaffold step is marked as running project code and third-party, is never run without approval, and runs with its working folder set to the new folder (unit with the fake executor).
-- [ ] 5. After a successful scaffold the normal setup plan is built from the new project and run, with its own approval (unit and running app).
-- [ ] 6. A failed scaffold leaves the registered site and the folder, shows the failure, and Run again retries (unit and running app).
-- [ ] 7. The Add site window creates a blank project and a template project end to end (running app).
-- [ ] 8. `warren template list` and `warren site new` do the same from the terminal, with `--yes` approving the commands after printing them (CLI by hand).
-- [ ] 9. `just check` passes, and `WARREN_DEMO=1` still shows demo content and writes nothing.
+Checked means verified. How is in each line.
+
+- [x] 1. Name, location, domain and folder rules are enforced with a message for each failure (`NewProjectTests`: invalid and empty names, non-empty folder, `.DS_Store` allowed, location a file, location not writable, taken, invalid and reserved domains).
+- [x] 2. Each blank kind writes exactly its listed files and a `.warren.toml` that resolves to the right runtime and is detected as the right framework (`NewProjectTests`), and the Node, Bun, Python and PHP servers answer `GET /` with Warren's own runtimes (`BlankProjectIntegrationTests`). The static site is a single HTML file and was not served.
+- [x] 3. Each template's command runs to completion non-interactively with Warren's own runtimes and produces a project that detection names correctly (`TemplateIntegrationTests`: Next.js, Vite, Astro, SvelteKit, Laravel, Django; two commands needed extra flags, see Prior art).
+- [x] 4. The scaffold step is marked as running project code and third-party, is never run without approval, and runs in the new folder (`NewProjectTests.theScaffoldPlanNeedsApprovalIsThirdPartyAndRunsInTheNewFolder`).
+- [x] 5. After a successful scaffold the normal setup plan is built from the new project and run, with its own approval (running app: Next.js created, then `npm install` asked separately and ran).
+- [ ] 6. A failed scaffold leaves the registered site and the folder, shows the failure, and Run again retries. Not exercised: the failure path is the same runner behaviour as a failed install (012), but I did not break a scaffold on purpose.
+- [x] 7. The Add site window creates a blank project and a template project end to end (running app). A Next.js project from the template pane: name typed, domain filled in, approval sheet worded for third-party code, scaffold, second sheet, `npm install`, plan complete. A blank Node project from the blank pane: the files listed, created, `npm install` asked. Not exercised in the window: the search box, the location chooser, and a clashing or invalid name on screen.
+- [x] 8. `warren template list` and `warren site new` work (CLI run by hand: a static project, a Node project with `--yes` that installed Node and ran `npm install`, and the unknown-template, bad-name and non-empty-folder errors).
+- [x] 9. `just check` passes (253 tests). `WARREN_DEMO=1` was not run again for this spec.
 
 ## Test plan
 
@@ -108,8 +110,10 @@ New code and UI only. No state changes. Templates are fetched at run time, so th
 
 ## Open questions
 
-1. **Scaffold flags change between releases.** Recommendation: pin nothing, run `@latest`, and keep the per-template integration test as the early warning; a break shows as a failed step with the log and a one-row fix.
-2. **Two approval sheets for a template.** Recommendation: accept it. The first covers fetching and running the scaffolder, the second the project's own install scripts, which are different code.
-3. **Scaffolders that install dependencies themselves** are told not to (`--skip-install` and similar), so Warren's plan owns installation and its shared package cache. Recommendation: yes.
-4. **Where the list lives.** Recommendation: a Swift table now, replaced by the catalog data in 045.
-5. **`git init` for new projects.** Recommendation: not here; it can be a setup-plan step later.
+Decided with the reviewer when approving.
+
+1. **Run `@latest`** and rely on the per-template integration test as the early warning.
+2. **Two approval sheets** for a template.
+3. **Scaffolders do not install dependencies**; Warren's plan does.
+4. **The template list is a Swift table** until the catalog (045).
+5. **No `git init`** for new projects.
