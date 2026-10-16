@@ -9,7 +9,7 @@ Warren should be built from stable, existing parts. This list is a starting poin
 | Python | uv (versions, venvs, packages) | uv (decided in 009: one binary installs Python and is the package manager) | 009 |
 | PHP | Prebuilt static PHP binaries, mise plugins, Homebrew builds | Prebuilt static-php-cli binaries (cli and fpm), pinned by SHA-256, plus Composer's phar (surveyed in 008) | 008 |
 | Package caches | pnpm, uv, Bun and Composer shared stores, pointed at one location by environment variables | Their own caches | 007 |
-| Framework and project detection | Nixpacks and Railpack detectors, buildpacks, `package.json` and lockfile heuristics | Evaluate Railpack and Nixpacks before writing detectors | 010, 011 |
+| Framework and project detection | Nixpacks and Railpack detectors, buildpacks, `package.json` and lockfile heuristics | Own small detector table for dev commands (decided in 010): Railpack and Nixpacks only produce production container plans | 010, 011 |
 | Reverse proxy and local HTTPS | Caddy (automatic HTTPS, internal CA, admin API for live config), mkcert plus a proxy | Caddy as a managed helper binary (decided in 005) | 005 |
 | Local DNS for custom domains | dnsmasq, macOS per-domain resolver files, `/etc/hosts` | CoreDNS with per-domain resolver files (decided in 006) | 006 |
 | Database and service binaries | Upstream release binaries, Homebrew bottles, Postgres.app-style builds, embedded-postgres binaries | Evaluate; prefer upstream binaries we verify by checksum | 015 to 018 |
