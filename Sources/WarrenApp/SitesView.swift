@@ -114,6 +114,14 @@ struct SitesView: View {
                 info("Runtime", site.runtime)
                 info("State", site.state.rawValue.capitalized)
             }
+            if !site.startLine.isEmpty {
+                Card {
+                    VStack(alignment: .leading, spacing: 3) {
+                        Text("Starts with").font(.system(size: 11)).foregroundStyle(.secondary)
+                        Text(site.startLine).font(.system(size: 12.5, design: .monospaced)).textSelection(.enabled)
+                    }
+                }
+            }
             Spacer()
         }
         .padding(20)

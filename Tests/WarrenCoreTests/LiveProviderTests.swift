@@ -63,6 +63,23 @@ struct LiveProviderTests {
         #expect(snapshot.runtimeGroups.isEmpty)
     }
 
+    @Test func aSiteShowsItsDetectedFrameworkAndHowItStarts() throws {
+        try addSite("web")
+        try #"{"dependencies":{"next":"15"},"scripts":{"dev":"next dev"}}"#.write(
+            to: root.appendingPathComponent("web/package.json"), atomically: true, encoding: .utf8
+        )
+        let site = try #require(provider.snapshot().sites.first)
+        #expect(site.stack == "Next.js")
+        #expect(site.startLine == "npm run dev")
+    }
+
+    @Test func aSiteNothingMatchesIsUnknownWithNoStartLine() throws {
+        try addSite("plain")
+        let site = try #require(provider.snapshot().sites.first)
+        #expect(site.stack == "Unknown")
+        #expect(site.startLine.isEmpty)
+    }
+
     @Test func aSiteWithoutAPortOrRuntimeSaysSo() throws {
         try addSite("plain")
         let site = try #require(provider.snapshot().sites.first)

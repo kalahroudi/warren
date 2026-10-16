@@ -85,15 +85,17 @@ public final class LiveProvider: StateProvider {
             let runtime = RuntimeResolver.requirements(for: site).map(\.label).joined(separator: ", ")
             let label = runtime.isEmpty ? Self.noRuntime : runtime
             let listening = site.port.map(PortCheck.isListening) ?? false
+            let detection = FrameworkDetector.detect(site: site)
             return Site(
                 id: site.id,
                 domain: site.domains.first ?? site.id,
-                stack: "Unknown",
+                stack: detection.displayName,
                 runtime: label,
                 detail: site.port.map { ":\($0)" } ?? "no port set",
                 path: site.path.hasPrefix(home) ? "~" + site.path.dropFirst(home.count) : site.path,
                 state: listening ? .running : .stopped,
-                relayURL: nil
+                relayURL: nil,
+                startLine: detection.id == nil && detection.command == nil ? "" : detection.startLine
             )
         }
     }

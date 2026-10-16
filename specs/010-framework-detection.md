@@ -1,6 +1,6 @@
 # 010 · Framework detection and start commands
 
-Status: Draft · Phase 2 · Depends on: 004, 007, 008, 009
+Status: Implemented · Phase 2 · Depends on: 004, 007, 008, 009
 
 ## Goal
 
@@ -19,7 +19,7 @@ Warren looks at a project folder and says what it is and how to run it: "Next.js
 - **Sites page**: the "Framework" line shows the detected framework ("Next.js", "Laravel", "Static site") instead of "Unknown", and a new "Starts with" line shows the command, or "Served by PHP-FPM from `public/`" for PHP, or "Served as static files". When a site's `.warren.toml` sets `[run] command`, the line shows that command and says "from .warren.toml".
 - **Nothing to configure.** A wrong guess is fixed by a `[run]` command in `.warren.toml`, which always wins. The site page offers no editor for it in this spec; an editor belongs with the Add-site flow.
 - **Popover and wizard** unchanged.
-- **CLI** (additional): `warren site detect <site or folder> [--json]` prints what Warren sees. `site show` includes it.
+- **CLI** (additional): `warren site detect <site or folder> [--json]` prints what Warren sees. `site show` prints it too (text only; its JSON stays the registry's record).
 - **MCP** (specs 020 to 022): `get_site` includes the detection. It is read only.
 
 ## Prior art
@@ -76,7 +76,7 @@ So Warren keeps a small detector. What it keeps is deliberately little: a table 
 
 Rows are data in one Swift file with a test per row, so adding a framework is a table entry and a fixture.
 
-**Dev-server host checks.** Vite 5.4.12 and later reject requests whose `Host` is not `localhost` unless the name is allowed, so a site at `app.test` would show a blocked page. For Vite-based frameworks the detection records an environment variable (checked against a real Vite in the build) that allows the site's domains, and a note. Other servers that do host checking (Angular's `--allowed-hosts`, Next.js `allowedDevOrigins`) are listed in `notes` with the setting, and are the known cases this spec handles by environment or flag where one exists.
+**Dev-server host checks.** Vite 5.4.12 and later reject requests whose `Host` is not `localhost` unless the name is allowed, so a site at `app.test` would show a blocked page. For Vite-based frameworks (Vite, Nuxt, Astro, SvelteKit, Remix) the detection sets `__VITE_ADDITIONAL_SERVER_ALLOWED_HOSTS`. Checked against a real Vite 7.3.7: the variable takes **one** value, not a list (`app.test,other.test` was blocked), and a leading dot allows a name and everything under it (`.test` allowed `app.test`, `api.app.test` and `other.test`, and still blocked `evil.example`). So a site with one domain gets that domain, and a site with several domains sharing an ending gets that ending with a leading dot. Other servers that do host checking (Angular's `--allowed-hosts`, Next.js `allowedDevOrigins`) are listed in `notes` with the setting, and are the known cases this spec handles by environment or flag where one exists.
 
 **Performance.** Reading a handful of files, under a millisecond. The result is computed when the Sites page loads, not stored, so it is never stale.
 
@@ -84,15 +84,17 @@ Rows are data in one Swift file with a test per row, so adding a framework is a 
 
 ## Acceptance criteria
 
-- [ ] 1. Each framework row identifies a fixture project, and a project matching none is `unknown` (unit, one fixture per row).
-- [ ] 2. `[run] command` in `.warren.toml` overrides the command and leaves the framework name (unit).
-- [ ] 3. The package manager comes from the lockfile or `packageManager` (unit).
-- [ ] 4. A project's own `dev` script is used in preference to the framework default (unit).
-- [ ] 5. Detection reads files only: a fixture containing scripts, `postinstall` hooks and a hostile `mise.toml` runs none of them (test that creates marker files).
-- [ ] 6. The Sites page shows the framework and the "Starts with" line for registered sites, and "Unknown" only when nothing matched (running app).
-- [ ] 7. `warren site detect` prints the same result, with `--json` (CLI run by hand).
-- [ ] 8. The Vite host allowance works: a real Vite dev server started by hand with the variable answers a request for `app.test` (manual, recorded in the PR).
-- [ ] 9. `just check` passes, and `WARREN_DEMO=1` still shows demo content.
+Checked means verified. How is in each line.
+
+- [x] 1. Each framework row identifies a fixture project, and a project matching none is `unknown` (`FrameworkTests`: one fixture per row plus the fallbacks).
+- [x] 2. `[run] command` in `.warren.toml` overrides the command and leaves the framework name (`FrameworkTests.warrenTomlCommandWinsAndKeepsTheFrameworkName`).
+- [x] 3. The package manager comes from `packageManager`, then the lockfile (`FrameworkTests.thePackageManagerComesFromTheFieldThenTheLockfile`).
+- [x] 4. A project's own `dev` script is used in preference to the framework default (`FrameworkTests`, Next.js and Vite cases).
+- [x] 5. Detection reads files only: a fixture with a `dev` script, a `postinstall` hook, a hostile `mise.toml`, and a `[run] command` that touches a marker file leaves no marker (`FrameworkTests.detectionRunsNothingInTheProject`).
+- [x] 6. The Sites page shows the framework and a "Starts with" card (running app: a Next.js-like folder showed "Next.js" and `npm run dev`). "Unknown" with no start line for a folder that matches nothing is covered by `LiveProviderTests`; I did not click through all three fixtures in the app.
+- [x] 7. `warren site detect` prints the same result, with `--json` (run by hand on a registered Next.js-like site, a Laravel-like site and a folder path).
+- [x] 8. The Vite host allowance works against a real Vite 7.3.7 started by hand (see Behavior for what it showed). Run with the machine's Node, not Warren's, in a throwaway folder.
+- [x] 9. `just check` passes (183 tests). `WARREN_DEMO=1` was not run again for this spec.
 
 ## Test plan
 
@@ -107,7 +109,9 @@ No state, no migration. The line appears on update.
 
 ## Open questions
 
-1. **Own table or Railpack's detection as a hint?** Recommendation: own table, as the prior art shows. Railpack could be revisited if it grows a development mode.
-2. **Where does the table live?** Recommendation: a Swift file now, moved to repo data when the service catalog (018) sets the format, so both catalogs share a loader.
-3. **Frameworks beyond the list** (Rails, Go, Rust, .NET, Java). Recommendation: out for now; Ruby and Go arrive with their runtimes. They fall back to `[run] command`.
-4. **Should detection suggest a runtime?** Recommendation: no here; the Add-site flow (011) reads the detection and the version files together and proposes.
+Decided with the reviewer when approving.
+
+1. **Own table.** Railpack's detection is not used.
+2. **The table lives in a Swift file** for now.
+3. **Rails, Go, Rust, .NET and Java** are out; they use `[run] command`.
+4. **Detection suggests no runtime.** The Add-site flow does.
