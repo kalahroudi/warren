@@ -1,14 +1,15 @@
 # SPDX-License-Identifier: Apache-2.0
 #
 # Builds the static PHP that Warren downloads (spec 008) with static-php-cli, then publishes it as a release.
-# Pull requests that touch this file build one cell without publishing. A manual run builds and publishes
-# every supported minor for both architectures, and prints the SHA-256 lines to pin in PHPRelease.swift.
+# Run it by hand: it builds and publishes every supported minor for both architectures, and prints the SHA-256
+# lines to pin in PHPRelease.swift. Pull requests that touch this file build one cell without publishing.
 name: PHP build
 
 on:
   workflow_dispatch:
   pull_request:
     paths: [.github/workflows/php-build.yml]
+    types: [opened, labeled]
 
 env:
   SPC_VERSION: "2.8.5"
