@@ -1,6 +1,6 @@
 # 015 · Process manager: starting sites, and the `ServiceDriver` interface
 
-Status: Draft · Phase 4 · Depends on: 005, 007, 008, 010, 012, 043
+Status: Accepted · Phase 4 · Depends on: 005, 007, 008, 010, 012, 043
 
 ## Goal
 

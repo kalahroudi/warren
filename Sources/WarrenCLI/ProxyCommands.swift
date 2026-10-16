@@ -76,7 +76,7 @@ private func run(_ service: ProxyService, _ options: [String]) throws {
     for route in launch.plan
         .routes
     {
-        print("routing \(route.domains.joined(separator: ", ")) -> localhost:\(route.port)")
+        print("routing \(route.domains.joined(separator: ", ")) -> \(route.target.summary)")
     }
     printSkipped(launch.plan)
     for (key, value) in launch.environment {
@@ -122,7 +122,7 @@ private func status(_ service: ProxyService, _ options: [String]) throws {
     print("running: \(status.running ? "yes" : "no")")
     print("trusted: \(status.rootTrusted.map { $0 ? "yes" : "no" } ?? "no root certificate yet")")
     for route in status.routes {
-        print("  \(route.domains.joined(separator: ", ")) -> localhost:\(route.port)")
+        print("  \(route.domains.joined(separator: ", ")) -> \(route.target.summary)")
     }
     for skipped in status.skipped {
         print("  skipped \(skipped.siteID): \(skipped.reason)")
@@ -134,7 +134,7 @@ private func start(_ service: ProxyService, _ options: [String]) throws {
     let plan = try services.startProxy(ports: parsePorts(options, service))
     announceBackground(.proxy, services.background)
     for route in plan.routes {
-        print("routing \(route.domains.joined(separator: ", ")) -> localhost:\(route.port)")
+        print("routing \(route.domains.joined(separator: ", ")) -> \(route.target.summary)")
     }
     printSkipped(plan)
 }

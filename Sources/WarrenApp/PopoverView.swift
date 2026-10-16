@@ -6,6 +6,7 @@ import WarrenCore
 /// The menu bar popover: what people look at many times a day. Setup lives in the setup wizard, not here.
 struct PopoverView: View {
     @ObservedObject var model: AppModel
+    @ObservedObject var siteRun: SiteRunModel
     let openMain: () -> Void
     let openSetup: () -> Void
     let close: () -> Void
@@ -96,9 +97,14 @@ struct PopoverView: View {
                     .padding(8)
             }
             ForEach(snapshot.sites.prefix(6)) { site in
-                Button { open(site) } label: { row(site) }
-                    .buttonStyle(.plain)
-                    .help(snapshot.isLive ? "Open \(site.domain)" : "")
+                HStack(spacing: 4) {
+                    Button { open(site) } label: { row(site) }
+                        .buttonStyle(.plain)
+                        .help(snapshot.isLive ? "Open \(site.domain)" : "")
+                    if snapshot.isLive {
+                        control(site)
+                    }
+                }
             }
         }
         .padding(.horizontal, 8)
@@ -107,7 +113,7 @@ struct PopoverView: View {
 
     private func row(_ site: Site) -> some View {
         HStack(spacing: 10) {
-            StatusDot(running: site.state == .running)
+            StatusDot(running: site.state == .running, warning: site.state == .crashed)
             VStack(alignment: .leading, spacing: 1) {
                 HStack(spacing: 7) {
                     Text(site.domain).font(.system(size: 13, weight: .medium))
@@ -126,6 +132,20 @@ struct PopoverView: View {
         }
         .padding(8)
         .contentShape(Rectangle())
+    }
+
+    /// Start or stop. The only control the popover adds; anything that needs a decision opens the main window.
+    @ViewBuilder
+    private func control(_ site: Site) -> some View {
+        let busy = siteRun.busy.contains(site.id)
+        let active = site.state == .running || site.state == .starting
+        if busy {
+            ProgressView().controlSize(.small).frame(width: 52)
+        } else if active, site.managed {
+            Button("Stop") { siteRun.stop(site.id) }.controlSize(.small).frame(width: 52)
+        } else if !active {
+            Button("Start") { siteRun.start(site.id) }.controlSize(.small).frame(width: 52)
+        }
     }
 
     private func detail(_ site: Site) -> String {

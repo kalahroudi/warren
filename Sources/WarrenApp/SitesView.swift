@@ -8,6 +8,7 @@ struct SitesView: View {
     @ObservedObject var model: AppModel
     @ObservedObject var runtimes: RuntimesModel
     @ObservedObject var setupRun: SetupRunModel
+    @ObservedObject var siteRun: SiteRunModel
     let addSite: () -> Void
 
     var body: some View {
@@ -80,7 +81,7 @@ struct SitesView: View {
             if site.relayURL != nil {
                 Chip(text: "Relay", tint: .blue)
             }
-            StatusDot(running: site.state == .running)
+            StatusDot(running: site.state == .running, warning: site.state == .crashed)
         }
         .padding(12)
         .background(
@@ -102,19 +103,16 @@ struct SitesView: View {
     }
 
     private func detail(_ site: Site) -> some View {
-        let running = site.state == .running
-        return VStack(alignment: .leading, spacing: 16) {
+        VStack(alignment: .leading, spacing: 16) {
             HStack {
                 VStack(alignment: .leading, spacing: 2) {
                     Text(site.domain).font(.system(size: 19, weight: .semibold))
                     Text(site.path).font(.system(size: 12.5, design: .monospaced)).foregroundStyle(.secondary)
                 }
                 Spacer()
-                Button(running ? "Stop" : "Start") { model.setSite(site.id, running: !running) }
-                    .disabled(!model.snapshot.capabilities.canControlSites)
-                    .help(model.snapshot.capabilities
-                        .canControlSites ? "" : "Starting and stopping sites arrives with the process manager")
+                controls(site)
             }
+            runStatusCard(site)
             Card {
                 VStack(alignment: .leading, spacing: 4) {
                     SectionLabel(text: "Domain")
@@ -124,11 +122,12 @@ struct SitesView: View {
             }
             runtimeCard(site)
             setupCard(site)
+            logsCard(site)
             relayCard(site)
             HStack(spacing: 10) {
                 info("Framework", site.stack)
                 info("Runtime", site.runtime)
-                info("State", site.state.rawValue.capitalized)
+                info("State", site.state.label)
             }
             if !site.startLine.isEmpty {
                 Card {

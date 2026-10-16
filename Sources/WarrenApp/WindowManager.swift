@@ -11,15 +11,17 @@ final class WindowManager: NSObject, NSWindowDelegate {
     private let setup: SetupModel
     private let runtimes: RuntimesModel
     private let setupRun: SetupRunModel
+    private let siteRun: SiteRunModel
     private var mainWindow: NSWindow?
     private var setupWindow: NSWindow?
     private var addSiteWindow: NSWindow?
 
-    init(model: AppModel, setup: SetupModel, runtimes: RuntimesModel, setupRun: SetupRunModel) {
+    init(model: AppModel, setup: SetupModel, runtimes: RuntimesModel, setupRun: SetupRunModel, siteRun: SiteRunModel) {
         self.model = model
         self.setup = setup
         self.runtimes = runtimes
         self.setupRun = setupRun
+        self.siteRun = siteRun
     }
 
     func openMain() {
@@ -35,6 +37,7 @@ final class WindowManager: NSObject, NSWindowDelegate {
                 model: model,
                 runtimes: runtimes,
                 setupRun: setupRun,
+                siteRun: siteRun,
                 addSite: { [weak self] in self?.openAddSite() }
             ))
             window.setContentSize(NSSize(width: 1100, height: 720))

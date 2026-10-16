@@ -12,10 +12,28 @@ public struct ProxyPorts: Equatable, Sendable {
     }
 }
 
+/// What answers for a site's names.
+public enum ProxyTarget: Equatable, Sendable {
+    /// A server on a loopback port.
+    case server(port: Int)
+    /// PHP files in `root` through the PHP-FPM listening on `socket`.
+    case php(socket: String, root: String)
+    /// Files in `root`, served as they are.
+    case staticFiles(root: String)
+
+    public var summary: String {
+        switch self {
+        case let .server(port): "localhost:\(port)"
+        case let .php(_, root): "PHP-FPM, \(root)"
+        case let .staticFiles(root): "files in \(root)"
+        }
+    }
+}
+
 public struct ProxyRoute: Equatable, Sendable {
     public let siteID: String
     public let domains: [String]
-    public let port: Int
+    public let target: ProxyTarget
 }
 
 public struct ProxySkippedSite: Equatable, Sendable {
@@ -100,14 +118,49 @@ public enum CaddyConfig {
         var routes: [ProxyRoute] = []
         var skipped: [ProxySkippedSite] = []
         for site in sites.sorted(by: { $0.id < $1.id }) {
-            if let port = site.port {
-                routes.append(ProxyRoute(siteID: site.id, domains: site.domains, port: port))
-            } else {
-                skipped.append(ProxySkippedSite(siteID: site.id, reason: "no run.port in .warren.toml"))
+            switch SiteServing.target(for: site, paths: paths) {
+            case let .success(target): routes.append(ProxyRoute(siteID: site.id, domains: site.domains, target: target))
+            case let .failure(reason): skipped.append(ProxySkippedSite(siteID: site.id, reason: reason.text))
             }
         }
         let json = try render(routes: routes, ports: ports, paths: paths, socket: socket)
         return ProxyPlan(routes: routes, skipped: skipped, configJSON: json)
+    }
+
+    /// The handlers for one site. PHP follows what Caddy's `php_fastcgi` directive expands to: try the file, then the
+    /// directory's `index.php`, then `index.php`, and send `.php` requests to FPM; everything else is a file.
+    static func handlers(for target: ProxyTarget) -> [[String: Any]] {
+        switch target {
+        case let .server(port):
+            return [["handler": "reverse_proxy", "upstreams": [["dial": "localhost:\(port)"]]]]
+        case let .staticFiles(root):
+            return [["handler": "file_server", "root": root, "index_names": ["index.html"]]]
+        case let .php(socket, root):
+            let tryFiles: [String: Any] = [
+                "root": root,
+                "try_files": ["{http.request.uri.path}", "{http.request.uri.path}/index.php", "index.php"],
+                "split_path": [".php"],
+            ]
+            return [[
+                "handler": "subroute",
+                "routes": [
+                    [
+                        "match": [["file": tryFiles]],
+                        "handle": [["handler": "rewrite", "uri": "{http.matchers.file.relative}"]],
+                    ],
+                    [
+                        "match": [["path": ["*.php"]]],
+                        "handle": [[
+                            "handler": "reverse_proxy",
+                            "upstreams": [["dial": "unix/\(socket)"]],
+                            "transport": ["protocol": "fastcgi", "root": root, "split_path": [".php"]],
+                        ]],
+                        "terminal": true,
+                    ],
+                    ["handle": [["handler": "file_server", "root": root]]],
+                ],
+            ]]
+        }
     }
 
     private static func render(routes: [ProxyRoute], ports: ProxyPorts, paths: WarrenPaths,
@@ -122,7 +175,7 @@ public enum CaddyConfig {
         var httpRoutes: [[String: Any]] = [selfCheck] + routes.map { route in
             [
                 "match": [["host": route.domains, "remote_ip": ["ranges": loopback]]],
-                "handle": [["handler": "reverse_proxy", "upstreams": [["dial": "localhost:\(route.port)"]]]],
+                "handle": handlers(for: route.target),
                 "terminal": true,
             ]
         }
