@@ -72,7 +72,8 @@ final class WindowManager: NSObject, NSWindowDelegate {
             self.model.section = .sites
             self.model.selectedSiteID = site.id
             runtimes.reload()
-            openMain()
+            // One turn later, so the Add site window has finished closing before the main window is ordered in.
+            DispatchQueue.main.async { self.openMain() }
         }
         let view = AddSiteView(model: model) { [weak self] in self?.addSiteWindow?.close() }
         let window = NSWindow(
@@ -94,6 +95,9 @@ final class WindowManager: NSObject, NSWindowDelegate {
         NSApp.setActivationPolicy(.regular)
         NSApp.activate(ignoringOtherApps: true)
         window?.makeKeyAndOrderFront(nil)
+        // Lay out and draw now, so a window shown right after the Dock icon appears is never left empty.
+        window?.contentView?.layoutSubtreeIfNeeded()
+        window?.displayIfNeeded()
     }
 
     func windowWillClose(_ notification: Notification) {

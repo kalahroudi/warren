@@ -109,7 +109,11 @@ final class AddSiteModel: ObservableObject {
         Task {
             do {
                 let site = try await Task.detached {
-                    try SiteRegistry(paths: paths).add(path: folder.path, name: name, domains: [domain])
+                    let site = try SiteRegistry(paths: paths).add(path: folder.path, name: name, domains: [domain])
+                    // Bring a running proxy and DNS server up to date, as `warren site add` does. A failure here
+                    // does not undo the registration.
+                    _ = NetworkServices(paths: paths).applyRegistryChange()
+                    return site
                 }.value
                 adding = false
                 onAdded(site)
