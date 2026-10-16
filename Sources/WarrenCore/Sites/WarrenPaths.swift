@@ -46,3 +46,15 @@ public struct WarrenPaths: Sendable {
         root.appendingPathComponent("run", isDirectory: true)
     }
 }
+
+public extension WarrenPaths {
+    /// Everything that can be downloaded again. Safe to delete.
+    var cacheDirectory: URL {
+        root.appendingPathComponent("cache", isDirectory: true)
+    }
+
+    /// Where npm, pnpm, Yarn and Bun download packages for processes Warren starts.
+    var packagesCacheDirectory: URL {
+        cacheDirectory.appendingPathComponent("packages", isDirectory: true)
+    }
+}

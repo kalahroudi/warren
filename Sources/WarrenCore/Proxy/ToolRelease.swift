@@ -30,6 +30,8 @@ public struct ToolRelease: Sendable {
     public let name: String
     public let version: String
     public let binaryName: String
+    /// Where the binary sits inside the archive, when it is not at the top.
+    public var pathInArchive: String?
     public let assets: [CPUArchitecture: ToolAsset]
 
     public func asset(for architecture: CPUArchitecture) throws -> ToolAsset {
@@ -89,5 +91,29 @@ public extension ToolRelease {
 
     private static func corednsURL(_ file: String) -> URL {
         URL(string: "https://github.com/coredns/coredns/releases/download/v1.14.7/\(file)")!
+    }
+}
+
+public extension ToolRelease {
+    /// mise, used to install and remove Node and Bun (spec 007).
+    static let mise = ToolRelease(
+        name: "mise",
+        version: "2026.10.11",
+        binaryName: "mise",
+        pathInArchive: "mise/bin/mise",
+        assets: [
+            .arm64: ToolAsset(
+                url: miseURL("mise-v2026.10.11-macos-arm64.tar.gz"),
+                checksum: .sha256("64592e2978459d91b9dc690352c97d59a8c2b327f586fd201468fa56afe66311")
+            ),
+            .intel: ToolAsset(
+                url: miseURL("mise-v2026.10.11-macos-x64.tar.gz"),
+                checksum: .sha256("6eaffe02521c700b420ba6930dfbc528951f27c1c9896c827ab6aab7248c75f1")
+            ),
+        ]
+    )
+
+    private static func miseURL(_ file: String) -> URL {
+        URL(string: "https://github.com/jdx/mise/releases/download/v2026.10.11/\(file)")!
     }
 }

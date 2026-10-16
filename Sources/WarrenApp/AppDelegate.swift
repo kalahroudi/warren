@@ -9,7 +9,11 @@ import WarrenCore
 final class AppDelegate: NSObject, NSApplicationDelegate, NSPopoverDelegate {
     private let model = AppDelegate.makeModel()
     private let setup = SetupModel()
-    private lazy var windows = WindowManager(model: model, setup: setup)
+    private let runtimes = RuntimesModel(
+        paths: .fromEnvironment(),
+        enabled: ProcessInfo.processInfo.environment["WARREN_DEMO"] != "1"
+    )
+    private lazy var windows = WindowManager(model: model, setup: setup, runtimes: runtimes)
     private var item: NSStatusItem!
     private let popover = NSPopover()
 

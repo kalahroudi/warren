@@ -107,7 +107,7 @@ public struct ToolInstaller: Sendable {
         let result = try Shell.run("/usr/bin/tar", ["-xzf", archive.path, "-C", scratch.path])
         guard result.status == 0 else { throw ToolInstallError.extractionFailed(result.output) }
 
-        let extracted = scratch.appendingPathComponent(release.binaryName)
+        let extracted = scratch.appendingPathComponent(release.pathInArchive ?? release.binaryName)
         guard FileManager.default.fileExists(atPath: extracted.path) else {
             throw ToolInstallError.binaryMissing(release.binaryName)
         }

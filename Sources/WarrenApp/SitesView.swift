@@ -6,6 +6,7 @@ import WarrenCore
 
 struct SitesView: View {
     @ObservedObject var model: AppModel
+    @ObservedObject var runtimes: RuntimesModel
 
     var body: some View {
         VStack(alignment: .leading, spacing: 16) {
@@ -18,6 +19,7 @@ struct SitesView: View {
             }
         }
         .padding(24)
+        .onAppear { runtimes.reload() }
     }
 
     private var list: some View {
@@ -105,6 +107,7 @@ struct SitesView: View {
                     Text(certificateNote).font(.system(size: 12)).foregroundStyle(.secondary)
                 }
             }
+            runtimeCard(site)
             relayCard(site)
             HStack(spacing: 10) {
                 info("Framework", site.stack)
@@ -115,6 +118,44 @@ struct SitesView: View {
         }
         .padding(20)
         .background(Color.warrenCard, in: RoundedRectangle(cornerRadius: 16))
+    }
+
+    /// What the site needs from Node or Bun, and a button to install it if it is missing. Shown only when the site
+    /// asks for something.
+    @ViewBuilder
+    private func runtimeCard(_ site: Site) -> some View {
+        if model.snapshot.isLive, let plan = runtimes.plan(for: site.id), !plan.needs.isEmpty {
+            Card {
+                VStack(alignment: .leading, spacing: 8) {
+                    SectionLabel(text: "Runtime")
+                    if let installing = runtimes.installing {
+                        HStack(spacing: 8) {
+                            ProgressView().controlSize(.small)
+                            Text("Installing \(installing.label) · \(installing.progress)")
+                                .font(.system(size: 11.5)).foregroundStyle(.secondary).lineLimit(1)
+                        }
+                    }
+                    ForEach(plan.needs, id: \.requirement.label) { need in
+                        HStack {
+                            VStack(alignment: .leading, spacing: 1) {
+                                Text(need.requirement.label).font(.system(size: 13.5, weight: .medium))
+                                Text("from \(need.requirement.source.label)")
+                                    .font(.system(size: 11.5)).foregroundStyle(.secondary)
+                            }
+                            Spacer()
+                            if let version = need.installedVersion {
+                                Chip(text: "Installed \(version)", tint: .warrenAccent)
+                            } else {
+                                Chip(text: "Not installed", tint: .orange)
+                                Button("Install") { runtimes.install(need.requirement) }
+                                    .accessibilityLabel("Install \(need.requirement.label)")
+                                    .disabled(runtimes.installing != nil)
+                            }
+                        }
+                    }
+                }
+            }
+        }
     }
 
     private func relayCard(_ site: Site) -> some View {
