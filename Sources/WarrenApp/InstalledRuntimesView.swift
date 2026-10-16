@@ -121,7 +121,7 @@ struct InstalledRuntimesView: View {
                 VStack(alignment: .leading, spacing: 2) {
                     Text("Packages cache").font(.system(size: 14.5, weight: .semibold))
                     Text(
-                        "Downloads from npm, pnpm, Yarn, Bun and Composer for sites Warren runs. "
+                        "Downloads from npm, pnpm, Yarn, Bun, Composer, uv and pip for sites Warren runs. "
                             + "Safe to clear: packages download again when needed."
                     )
                     .font(.system(size: 11.5)).foregroundStyle(.secondary)

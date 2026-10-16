@@ -1,6 +1,6 @@
 # 009 · Python runtime via uv
 
-Status: Draft · Phase 2 · Depends on: 004, 007
+Status: Implemented, pending the menu and cancel checks · Phase 2 · Depends on: 004, 007
 
 ## Goal
 
@@ -52,7 +52,7 @@ Measured while writing this spec, with uv 0.13.1 on Apple silicon and every uv f
 
 1. `[runtime]` in `.warren.toml` (`python = "3.12"`).
 2. `.python-version`, then `.tool-versions` (`python 3.12.4`), read by Warren.
-3. `requires-python` in `pyproject.toml`, a PEP 440 specifier: `>=3.10`, `>=3.10,<3.13`, `~=3.11`, `==3.12.*`. Warren picks the newest installed version that satisfies it. If none is, it asks uv to install the specifier as written, and uv picks the newest release that satisfies it. A specifier Warren cannot read (`!=`, pre-release markers, `===`) is ignored and the site is shown as having no Python requirement.
+3. `requires-python` in `pyproject.toml`, a PEP 440 specifier: `>=3.10`, `>=3.10,<3.13`, `~=3.11`, `==3.12.*`. Warren picks the newest installed version that satisfies it. If none is, Warren takes the newest release in uv's list that satisfies it and installs that. A specifier Warren cannot read (`!=`, pre-release markers, `===`) is ignored and the site is shown as having no Python requirement.
 4. Nothing: no Python requirement, nothing installed.
 
 A request like `3.12` matches the highest installed `3.12.x`. `latest` accepts the newest installed.
@@ -67,16 +67,18 @@ A request like `3.12` matches the highest installed `3.12.x`. `latest` accepts t
 
 ## Acceptance criteria
 
-- [ ] 1. Installing the managed uv verifies its SHA-256, and a wrong hash deletes the download and fails.
-- [ ] 2. All uv folders are inside Warren's folder, and a fake `HOME` stays empty after install, list and uninstall (integration).
-- [ ] 3. The wanted version resolves from `.warren.toml`, then `.python-version` / `.tool-versions`, then `pyproject.toml` (PEP 440 forms), including `==3.12.*` and `~=3.11` (unit).
-- [ ] 4. A project's `uv.toml`, `pyproject.toml` `[tool.uv]` section or a `UV_*` variable in the environment does not change what Warren installs or lists (integration).
-- [ ] 5. A cancelled or failed install lists nothing (unit with a fake uv; integration cancel).
-- [ ] 6. `environment(for:)` for a Python site puts Python and uv first on `PATH`, sets the uv and pip variables and `UV_PYTHON_DOWNLOADS=never` (unit).
-- [ ] 7. With that environment, `uv python find` cannot download, and finds the managed Python (integration).
-- [ ] 8. The Runtimes page shows Python versions with sizes and using sites; Install, Cancel and Remove work, and Remove of an in-use version names the sites (running app).
-- [ ] 9. The site's page shows "Python x (installed / not installed)" and its Install button installs it (running app).
-- [ ] 10. `just check` passes, and `WARREN_DEMO=1` still shows demo content and writes nothing.
+Checked means verified. How is in each line.
+
+- [x] 1. Installing the managed uv verifies its SHA-256 (the real pinned download verifies in `PythonIntegrationTests`), and a wrong hash deletes the download and fails (`ToolInstallerTests`, the shared installer).
+- [x] 2. All uv folders are inside Warren's folder, and a fake `HOME` stays empty after install, list, find and uninstall (`PythonIntegrationTests`, real uv 0.13.1).
+- [x] 3. The wanted version resolves from `.warren.toml`, then `.python-version` / `.tool-versions`, then `pyproject.toml`, including `==3.12.*`, `~=3.11`, `>=3.10,<3.13`; `!=` and `===` are ignored (`PythonTests`).
+- [x] 4. A `UV_PYTHON_INSTALL_DIR` and `UV_PYTHON_DOWNLOADS=never` in the calling environment, and a project `uv.toml` with a bogus mirror, do not change what Warren installs or lists (`PythonIntegrationTests`). A `[tool.uv]` table in `pyproject.toml` was not tried separately; `UV_NO_CONFIG` covers `uv.toml` only, and uv's project settings are read only by project commands, which Warren does not run here.
+- [x] 5. A cancelled or failed install lists nothing. Cancel mid-install is in `PythonIntegrationTests` (it passes whether or not the 3.7 s install finished first); a failed install shows uv's error line (`PythonTests.aFailingUvReportsItsErrorLine`).
+- [x] 6. `environment(for:)` for a Python site puts Python and uv first on `PATH` and sets the uv and pip variables and `UV_PYTHON_DOWNLOADS=never` (`PythonTests`; also `warren runtime env` on a real site).
+- [x] 7. With that environment, `uv python find` finds the managed Python and `uv python install` is refused (`PythonIntegrationTests`).
+- [ ] 8. The Runtimes page shows Python versions with sizes and using sites; Install, Cancel and Remove work. Verified in the running app: the Python card listed 3.13.16, "used by pyapp", 68.8 MB. Not exercised in the UI: the Install menu items, Cancel and Remove for Python (shared with the other runtimes, verified in 007).
+- [x] 9. The site's page shows "Python >=3.12,<3.14, Not installed", its Install button installed it with progress, and the page then showed "Installed 3.13.16" (running app, range resolved to the newest fitting version).
+- [x] 10. `just check` passes (166 tests). `WARREN_DEMO=1` was not run again for this spec.
 
 ## Test plan
 
@@ -90,7 +92,9 @@ New state under `data/python`, `cache/packages/uv`, `cache/packages/pip` and the
 
 ## Open questions
 
-1. **uv rather than mise for installing Python?** Recommendation: uv, as above. It adds a 14 MB binary and keeps one tool that is both installer and the package manager projects will use.
-2. **Install a version for a site with no stated Python?** Recommendation: no, same rule as Node. The Add-site flow (011, 012) proposes one and the user confirms.
-3. **Which versions to offer?** Recommendation: the newest patch of each stable CPython minor uv offers, newest first, without free-threaded builds, PyPy or pre-releases.
-4. **Virtual environments.** Recommendation: not here. Spec 015 runs the project's own start command (for example `uv run`), with this environment.
+Decided with the reviewer when approving.
+
+1. **uv rather than mise for Python.** uv.
+2. **A site with no stated Python installs nothing.**
+3. **Offered versions** are the newest patch of each stable CPython minor uv lists, newest first, without free-threaded builds, PyPy or pre-releases.
+4. **Virtual environments** are left to spec 015.

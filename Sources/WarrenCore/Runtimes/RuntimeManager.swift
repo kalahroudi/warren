@@ -28,21 +28,26 @@ public struct RuntimeManager: Sendable {
     public let paths: WarrenPaths
     public let mise: MiseTool
     public let php: PHPTool
+    public let uvTool: UvTool
 
-    public init(paths: WarrenPaths, mise: MiseTool? = nil, php: PHPTool? = nil) {
+    public init(paths: WarrenPaths, mise: MiseTool? = nil, php: PHPTool? = nil, uvTool: UvTool? = nil) {
         self.paths = paths
         self.mise = mise ?? MiseTool(paths: paths)
         self.php = php ?? PHPTool(paths: paths)
+        self.uvTool = uvTool ?? UvTool(paths: paths)
     }
 
     public func inventory() throws -> [InstalledRuntime] {
-        try mise.installed() + php.installed()
+        try mise.installed() + php.installed() + uvTool.installed()
     }
 
     /// Stable releases, newest last.
     public func available(_ kind: RuntimeKind) async throws -> [String] {
         if kind == .php {
             return php.available()
+        }
+        if kind == .python {
+            return try await uvTool.availableVersions()
         }
         try await mise.ensureInstalled()
         return try mise.availableVersions(kind)
@@ -67,6 +72,8 @@ public struct RuntimeManager: Sendable {
     ) async throws {
         if kind == .php {
             try await php.install(version: version, onProgress: onProgress)
+        } else if kind == .python {
+            try await uvTool.install(version: version, onProgress: onProgress)
         } else {
             try await mise.install(kind, version: version, onProgress: onProgress)
         }
@@ -90,6 +97,8 @@ public struct RuntimeManager: Sendable {
     public func remove(_ runtime: InstalledRuntime) throws {
         if runtime.kind == .php {
             try php.uninstall(runtime)
+        } else if runtime.kind == .python {
+            try uvTool.uninstall(runtime)
         } else {
             try mise.uninstall(runtime)
         }
@@ -125,6 +134,10 @@ public struct RuntimeManager: Sendable {
             let runtime = InstalledRuntime(kind: .php, version: version, path: path, bytes: 0)
             environment.merge(php.environment(for: runtime)) { _, new in new }
             binaries += [php.composerBin?.path].compactMap(\.self)
+        }
+        if plan.needs.contains(where: { $0.requirement.kind == .python && $0.isInstalled }) {
+            environment.merge(uvTool.siteEnvironment()) { _, new in new }
+            binaries += [uvTool.binDirectory?.path].compactMap(\.self)
         }
         if !binaries.isEmpty {
             environment["PATH"] = (binaries + [base["PATH"]].compactMap(\.self)).joined(separator: ":")

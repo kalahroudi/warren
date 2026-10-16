@@ -1,10 +1,11 @@
 // SPDX-License-Identifier: Apache-2.0
 
 import Foundation
+import TOMLDecoder
 
 /// Works out which runtime versions a site asks for, and which installed version satisfies each.
-/// Order: `[runtime]` in `.warren.toml`, then the project's version files, then `engines.node` (Node) or
-/// `composer.json` (PHP).
+/// Order: `[runtime]` in `.warren.toml`, then the project's version files, then `engines.node` (Node),
+/// `composer.json` (PHP) or `pyproject.toml` (Python).
 public enum RuntimeResolver {
     public static func requirements(for site: ResolvedSite) -> [RuntimeRequirement] {
         let directory = URL(fileURLWithPath: site.path, isDirectory: true)
@@ -22,6 +23,9 @@ public enum RuntimeResolver {
         }
         if found[.php] == nil, let range = composerPHP(in: directory) {
             found[.php] = RuntimeRequirement(kind: .php, requested: range, source: .composer)
+        }
+        if found[.python] == nil, let range = requiresPython(in: directory) {
+            found[.python] = RuntimeRequirement(kind: .python, requested: range, source: .pyproject)
         }
         return RuntimeKind.allCases.compactMap { found[$0] }
     }
@@ -74,6 +78,16 @@ public enum RuntimeResolver {
         return nil
     }
 
+    /// `requires-python` in `pyproject.toml`, as written.
+    static func requiresPython(in directory: URL) -> String? {
+        guard let text = read(directory.appendingPathComponent("pyproject.toml")),
+              let root = try? TOMLTable(source: text),
+              let project = try? root.table(forKey: "project"),
+              let value = try? project.string(forKey: "requires-python"),
+              VersionRange(pep440: value) != nil else { return nil }
+        return value.trimmingCharacters(in: .whitespaces)
+    }
+
     /// Turns what version files write into what mise understands: `v22.1.0` to `22.1.0`, `lts/iron` to `lts-iron`.
     static func normalize(_ text: String) -> String? {
         var value = text.trimmingCharacters(in: .whitespacesAndNewlines)
@@ -105,7 +119,7 @@ public enum RuntimeResolver {
         let versions = installed.compactMap { text in SemanticVersion(text).map { (text, $0) } }
         let matching: [(String, SemanticVersion)]
         switch requirement.source {
-        case .engines, .composer:
+        case .engines, .composer, .pyproject:
             guard let range = requirement.range else { return nil }
             matching = versions.filter { range.contains($0.1) }
         default:

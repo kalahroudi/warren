@@ -23,6 +23,8 @@ public enum ToolChecksum: Equatable, Sendable {
 public struct ToolAsset: Equatable, Sendable {
     public let url: URL
     public let checksum: ToolChecksum
+    /// Where the binary sits inside this archive, when it differs from the release's.
+    public var pathInArchive: String?
 }
 
 /// A third-party tool Warren downloads and manages: pinned version, one archive per architecture.
@@ -115,5 +117,30 @@ public extension ToolRelease {
 
     private static func miseURL(_ file: String) -> URL {
         URL(string: "https://github.com/jdx/mise/releases/download/v2026.10.11/\(file)")!
+    }
+}
+
+public extension ToolRelease {
+    /// uv, used to install and remove Python (spec 009).
+    static let uvCLI = ToolRelease(
+        name: "uv",
+        version: "0.13.1",
+        binaryName: "uv",
+        assets: [
+            .arm64: ToolAsset(
+                url: uvURL("uv-aarch64-apple-darwin.tar.gz"),
+                checksum: .sha256("cfe454573412ff7380d15fc7dae5997ab53ffce72fce0a78e91ddbc84001acd2"),
+                pathInArchive: "uv-aarch64-apple-darwin/uv"
+            ),
+            .intel: ToolAsset(
+                url: uvURL("uv-x86_64-apple-darwin.tar.gz"),
+                checksum: .sha256("bb7b805bdcf3d0bc8c74ceb94569e6b3e8aa35bd492acdbb9d46bf46d9d4ff6b"),
+                pathInArchive: "uv-x86_64-apple-darwin/uv"
+            ),
+        ]
+    )
+
+    private static func uvURL(_ file: String) -> URL {
+        URL(string: "https://github.com/astral-sh/uv/releases/download/0.13.1/\(file)")!
     }
 }
