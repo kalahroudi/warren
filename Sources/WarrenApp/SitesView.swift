@@ -7,10 +7,19 @@ import WarrenCore
 struct SitesView: View {
     @ObservedObject var model: AppModel
     @ObservedObject var runtimes: RuntimesModel
+    let addSite: () -> Void
 
     var body: some View {
         VStack(alignment: .leading, spacing: 16) {
-            PageHeader(title: "Sites", subtitle: "Any folder, any framework, any domain you like.")
+            HStack(alignment: .top) {
+                PageHeader(title: "Sites", subtitle: "Any folder, any framework, any domain you like.")
+                Spacer()
+                if model.snapshot.isLive {
+                    Button { addSite() } label: { Label("Add site", systemImage: "plus") }
+                        .keyboardShortcut("n")
+                        .accessibilityLabel("Add site")
+                }
+            }
             HStack(alignment: .top, spacing: 16) {
                 list.frame(width: 360)
                 if let site = model.selectedSite {
@@ -31,14 +40,16 @@ struct SitesView: View {
 
     private var emptyState: some View {
         Card {
-            VStack(alignment: .leading, spacing: 6) {
+            VStack(alignment: .leading, spacing: 8) {
                 Text("No sites yet").font(.system(size: 14.5, weight: .semibold))
                 Text(
-                    "Register a project folder with the command below. Adding sites from the app arrives with the setup wizard."
+                    "Add a project folder. Warren shows what it found and what it takes to run before it changes anything."
                 )
                 .font(.system(size: 12.5))
                 .foregroundStyle(.secondary)
-                Text("warren site add ~/path/to/project").font(.system(size: 12, design: .monospaced))
+                if model.snapshot.isLive {
+                    Button("Add site") { addSite() }
+                }
             }
         }
     }
@@ -108,6 +119,7 @@ struct SitesView: View {
                 }
             }
             runtimeCard(site)
+            setupCard(site)
             relayCard(site)
             HStack(spacing: 10) {
                 info("Framework", site.stack)
@@ -126,6 +138,21 @@ struct SitesView: View {
         }
         .padding(20)
         .background(Color.warrenCard, in: RoundedRectangle(cornerRadius: 16))
+    }
+
+    /// What is left to do for the site: the setup plan, checked against the machine each time. Hidden once complete.
+    @ViewBuilder
+    private func setupCard(_ site: Site) -> some View {
+        if model.snapshot.isLive, let plan = runtimes.setups[site.id], !plan.isComplete {
+            Card {
+                VStack(alignment: .leading, spacing: 10) {
+                    SectionLabel(text: "Setup")
+                    PlanStepList(steps: plan.steps.filter { $0.kind != .site })
+                    Text("Running the plan from here arrives with the next spec.")
+                        .font(.system(size: 11.5)).foregroundStyle(.secondary)
+                }
+            }
+        }
     }
 
     /// What the site needs from Node or Bun, and a button to install it if it is missing. Shown only when the site

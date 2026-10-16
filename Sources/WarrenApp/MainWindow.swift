@@ -5,6 +5,7 @@ import SwiftUI
 struct MainWindowView: View {
     @ObservedObject var model: AppModel
     @ObservedObject var runtimes: RuntimesModel
+    let addSite: () -> Void
 
     var body: some View {
         NavigationSplitView {
@@ -35,7 +36,7 @@ struct MainWindowView: View {
     @ViewBuilder
     private var detail: some View {
         switch model.section {
-        case .sites: SitesView(model: model, runtimes: runtimes)
+        case .sites: SitesView(model: model, runtimes: runtimes, addSite: addSite)
         case .services: ServicesView(model: model)
         case .runtimes: RuntimesView(model: model, runtimes: runtimes)
         case .agents: AgentsView(model: model)

@@ -11,6 +11,7 @@ final class WindowManager: NSObject, NSWindowDelegate {
     private let runtimes: RuntimesModel
     private var mainWindow: NSWindow?
     private var setupWindow: NSWindow?
+    private var addSiteWindow: NSWindow?
 
     init(model: AppModel, setup: SetupModel, runtimes: RuntimesModel) {
         self.model = model
@@ -29,7 +30,8 @@ final class WindowManager: NSObject, NSWindowDelegate {
             window.title = "Warren"
             window.contentViewController = NSHostingController(rootView: MainWindowView(
                 model: model,
-                runtimes: runtimes
+                runtimes: runtimes,
+                addSite: { [weak self] in self?.openAddSite() }
             ))
             window.setContentSize(NSSize(width: 1100, height: 720))
             window.isReleasedWhenClosed = false
@@ -60,6 +62,34 @@ final class WindowManager: NSObject, NSWindowDelegate {
         show(setupWindow)
     }
 
+    /// A fresh window each time, so it never shows a previous folder.
+    func openAddSite() {
+        addSiteWindow?.close()
+        let model = AddSiteModel(paths: .fromEnvironment()) { [weak self] site in
+            guard let self else { return }
+            addSiteWindow?.close()
+            self.model.refresh()
+            self.model.section = .sites
+            self.model.selectedSiteID = site.id
+            runtimes.reload()
+            openMain()
+        }
+        let view = AddSiteView(model: model) { [weak self] in self?.addSiteWindow?.close() }
+        let window = NSWindow(
+            contentRect: NSRect(x: 0, y: 0, width: 960, height: 660),
+            styleMask: [.titled, .closable],
+            backing: .buffered,
+            defer: false
+        )
+        window.title = "Add a site"
+        window.contentViewController = NSHostingController(rootView: view)
+        window.isReleasedWhenClosed = false
+        window.delegate = self
+        window.center()
+        addSiteWindow = window
+        show(window)
+    }
+
     private func show(_ window: NSWindow?) {
         NSApp.setActivationPolicy(.regular)
         NSApp.activate(ignoringOtherApps: true)
@@ -73,7 +103,7 @@ final class WindowManager: NSObject, NSWindowDelegate {
         }
         DispatchQueue.main.async { [weak self] in
             guard let self else { return }
-            let open = [mainWindow, setupWindow].contains { $0?.isVisible == true }
+            let open = [mainWindow, setupWindow, addSiteWindow].contains { $0?.isVisible == true }
             if !open {
                 NSApp.setActivationPolicy(.accessory)
             }
