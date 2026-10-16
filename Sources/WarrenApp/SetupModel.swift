@@ -118,11 +118,8 @@ final class SetupModel: ObservableObject {
 
     func trustCertificate() async {
         await work("Waiting for your password…") { [paths] in
-            let script = try TrustManager(paths: paths).trustScript()
-            try await Self.admin(
-                script,
-                prompt: "Warren wants to trust its local certificate so browsers accept your sites."
-            )
+            let prompt = "Warren wants to trust its local certificate so browsers accept your sites."
+            try await Task.detached { try TrustManager(paths: paths).trust(prompt: prompt) }.value
         }
     }
 
@@ -168,8 +165,8 @@ final class SetupModel: ObservableObject {
 
     func undoTrust() async {
         await work("Waiting for your password…") { [paths] in
-            let script = try TrustManager(paths: paths).untrustScript()
-            try await Self.admin(script, prompt: "Warren wants to stop trusting its local certificate.")
+            let prompt = "Warren wants to stop trusting its local certificate."
+            try await Task.detached { try TrustManager(paths: paths).untrust(prompt: prompt) }.value
         }
     }
 
