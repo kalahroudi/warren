@@ -29,7 +29,6 @@ func runSiteSetup(_ arguments: [String], paths: WarrenPaths) async throws {
         print("nothing to do: \(site.id) is set up")
         return
     }
-    let titles = Dictionary(uniqueKeysWithValues: plan.steps.map { ($0.id, $0.title) })
     print("setup for \(site.id):")
     for step in steps {
         print("  \(step.runsProjectCode ? "!" : "-") \(step.title)\(step.commandLine.map { "   $ \($0)" } ?? "")")
@@ -39,18 +38,24 @@ func runSiteSetup(_ arguments: [String], paths: WarrenPaths) async throws {
         return
     }
 
-    let runner = PlanRunner(paths: paths, site: site, manager: manager)
-    let assumeYes = flags.contains("--yes")
-    let summary = await runner.run(
-        plan: plan,
-        approve: { askForApproval($0, assumeYes: assumeYes) },
-        onEvent: { printEvent($0, titles: titles, logs: paths.setupLogsDirectory.appendingPathComponent(id)) }
-    )
+    let summary = await execute(plan, site: site, paths: paths, assumeYes: flags.contains("--yes"))
     guard summary.succeeded else {
         throw CLIError(summary.failed
             .isEmpty ? "setup is not finished: some steps were skipped or stopped" : "setup failed")
     }
     print("done")
+}
+
+/// Runs a plan in the terminal: asks before project code (unless `assumeYes`) and prints progress.
+func execute(_ plan: SetupPlan, site: ResolvedSite, paths: WarrenPaths, assumeYes: Bool) async -> RunSummary {
+    let titles = Dictionary(uniqueKeysWithValues: plan.steps.map { ($0.id, $0.title) })
+    let runner = PlanRunner(paths: paths, site: site)
+    let logs = paths.setupLogsDirectory.appendingPathComponent(site.id)
+    return await runner.run(
+        plan: plan,
+        approve: { askForApproval($0, assumeYes: assumeYes) },
+        onEvent: { printEvent($0, titles: titles, logs: logs) }
+    )
 }
 
 /// Asks `[y/N]` for each command that runs project code, unless `--yes` was given.

@@ -12,6 +12,8 @@ usage: warren <command>
   site detect <site or folder> [--json]  what the project is and how it starts
   site plan <site or folder> [--json]  what it takes to run the project
   site setup <id> [--yes]      run the setup plan (asks before running project code)
+  site new <template> <name>   create a project from a template or --blank <kind> (see: warren template list)
+  template list [--json]       the starters Warren can create
   site remove <id>             unregister a site (never deletes files)
   proxy <command>              local HTTPS proxy (see: warren proxy)
   dns <command>                local DNS for your domains (see: warren dns)
@@ -155,6 +157,18 @@ func runSite(_ arguments: [String], registry: SiteRegistry) throws {
 let arguments = Array(CommandLine.arguments.dropFirst())
 switch arguments.first {
 case "--version": print("warren \(Warren.version)")
+case "template":
+    if arguments.dropFirst().first == "list" {
+        listTemplates(json: arguments.contains("--json"))
+    } else {
+        fail(newProjectUsage)
+    }
+case "site" where arguments.dropFirst().first == "new":
+    do {
+        try await newProject(Array(arguments.dropFirst(2)), paths: .fromEnvironment())
+    } catch {
+        fail(error.localizedDescription)
+    }
 case "site" where arguments.dropFirst().first == "setup":
     do {
         try await runSiteSetup(Array(arguments.dropFirst(2)), paths: .fromEnvironment())

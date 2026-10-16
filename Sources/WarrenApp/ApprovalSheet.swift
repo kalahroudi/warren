@@ -19,7 +19,7 @@ struct ApprovalSheet: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 14) {
             Text("Run these commands?").font(.system(size: 17, weight: .semibold))
-            Text("These run code that came with this project, in \(approval.folder). Check them before you continue.")
+            Text(introduction)
                 .font(.system(size: 12.5)).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
             ScrollView {
                 VStack(alignment: .leading, spacing: 10) {
@@ -31,6 +31,10 @@ struct ApprovalSheet: View {
                                     .font(.system(size: 11.5, design: .monospaced))
                                     .padding(.horizontal, 7).padding(.vertical, 3)
                                     .background(Color.warrenCard, in: RoundedRectangle(cornerRadius: 5))
+                                if let source = step.payload["thirdParty"] {
+                                    Text("Downloads and runs \(source).").font(.system(size: 11.5))
+                                        .foregroundStyle(.orange)
+                                }
                             }
                         }
                     }
@@ -54,6 +58,12 @@ struct ApprovalSheet: View {
         }
         .padding(22)
         .frame(width: 560)
+    }
+
+    private var introduction: String {
+        approval.steps.contains { $0.payload["thirdParty"] != nil }
+            ? "This downloads code from the internet and runs it, in \(approval.folder). Check it before you continue."
+            : "These run code that came with this project, in \(approval.folder). Check them before you continue."
     }
 
     private func binding(_ id: String) -> Binding<Bool> {

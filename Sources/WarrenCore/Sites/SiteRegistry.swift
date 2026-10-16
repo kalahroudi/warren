@@ -119,6 +119,19 @@ public struct SiteRegistry: Sendable {
         return (record, resolve(record))
     }
 
+    /// Throws if a domain is invalid, reserved or used by another site, before a folder exists to register.
+    public func checkDomains(_ domains: [String]) throws {
+        let normalized = try domains.map(DomainName.normalize)
+        if let reserved = normalized.first(where: CaddyConfig.reservedDomains.contains) {
+            throw RegistryError.domainConflict(domain: reserved, otherSite: "Warren (reserved)")
+        }
+        for other in try load().sites {
+            if let clash = normalized.first(where: resolve(other).domains.contains) {
+                throw RegistryError.domainConflict(domain: clash, otherSite: other.id)
+            }
+        }
+    }
+
     private func validate(_ resolved: ResolvedSite, against sites: [RegisteredSite]) throws {
         if let reserved = resolved.domains.first(where: CaddyConfig.reservedDomains.contains) {
             throw RegistryError.domainConflict(domain: reserved, otherSite: "Warren (reserved)")

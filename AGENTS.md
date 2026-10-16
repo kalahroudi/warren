@@ -41,8 +41,9 @@ just warren runtime list       # Node, Bun, PHP and Python versions; see docs/ru
 just warren site detect .      # what a folder is and how it starts; see docs/frameworks.md
 just warren site plan .        # what it takes to run a folder; see docs/setup-plan.md
 just warren site setup <id>    # run a site's plan, asking before project code
+just warren site new --blank node demo   # new project; see docs/new-projects.md
 ```
 
-The app shows real state. `WARREN_DEMO=1` shows demo data instead (screenshots, design work), and `WARREN_HOME` points it at another state folder.
+The app shows real state. `WARREN_DEMO=1` shows demo data instead (screenshots, design work), and `WARREN_HOME` points it at another state folder, and `WARREN_SITES` at another default folder for new projects.
 
 `just check` is the single gate and needs a matching Xcode toolchain (accept the Xcode license first: `sudo xcodebuild -license accept`). `just dev` builds with SwiftPM and launches the app.

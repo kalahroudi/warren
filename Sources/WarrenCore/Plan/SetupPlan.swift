@@ -3,7 +3,7 @@
 import Foundation
 
 public enum PlanStepKind: String, Codable, Sendable {
-    case runtime, packageManager, dependencies, envFile, service, application, database, optional, site
+    case runtime, packageManager, scaffold, dependencies, envFile, service, application, database, optional, site
 }
 
 public enum PlanStepState: Equatable, Codable, Sendable {

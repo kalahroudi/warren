@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 import SwiftUI
+import WarrenCore
 
 /// Owns Warren's two regular windows. They are plain AppKit windows, so the menu bar popover can open them
 /// without depending on SwiftUI scenes. The Dock icon shows only while one of them is open.
@@ -68,22 +69,14 @@ final class WindowManager: NSObject, NSWindowDelegate {
     /// A fresh window each time, so it never shows a previous folder.
     func openAddSite() {
         addSiteWindow?.close()
-        let model = AddSiteModel(paths: .fromEnvironment()) { [weak self] site, runSetup in
-            guard let self else { return }
-            addSiteWindow?.close()
-            self.model.refresh()
-            self.model.section = .sites
-            self.model.selectedSiteID = site.id
-            runtimes.reload()
-            // One turn later, so the Add site window has finished closing before the main window is ordered in.
-            DispatchQueue.main.async {
-                self.openMain()
-                if runSetup {
-                    self.setupRun.start(siteID: site.id)
-                }
-            }
+        let paths = WarrenPaths.fromEnvironment()
+        let model = AddSiteModel(paths: paths) { [weak self] site, runSetup in
+            self?.finishAdding(site, runSetup: runSetup, template: nil)
         }
-        let view = AddSiteView(model: model) { [weak self] in self?.addSiteWindow?.close() }
+        let project = NewProjectModel(paths: paths) { [weak self] site, template in
+            self?.finishAdding(site, runSetup: true, template: template)
+        }
+        let view = AddSiteView(model: model, project: project) { [weak self] in self?.addSiteWindow?.close() }
         let window = NSWindow(
             contentRect: NSRect(x: 0, y: 0, width: 960, height: 660),
             styleMask: [.titled, .closable],
@@ -97,6 +90,23 @@ final class WindowManager: NSObject, NSWindowDelegate {
         window.center()
         addSiteWindow = window
         show(window)
+    }
+
+    /// After a site is added or created: close the window, show the site, and optionally run its setup (for a
+    /// template, the scaffolder first, then the normal plan).
+    private func finishAdding(_ site: ResolvedSite, runSetup: Bool, template: ProjectTemplate?) {
+        addSiteWindow?.close()
+        model.refresh()
+        model.section = .sites
+        model.selectedSiteID = site.id
+        runtimes.reload()
+        // One turn later, so the Add site window has finished closing before the main window is ordered in.
+        DispatchQueue.main.async {
+            self.openMain()
+            if runSetup {
+                self.setupRun.start(siteID: site.id, template: template)
+            }
+        }
     }
 
     private func show(_ window: NSWindow?) {
