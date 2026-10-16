@@ -102,7 +102,7 @@ struct AddSiteView: View {
                         SectionLabel(text: "Setup plan")
                         PlanStepList(steps: plan.steps)
                         Text(
-                            "Warren shows each command and asks before the first run. Running the plan arrives with the next spec."
+                            "Warren shows each command that runs code from the project and asks before it runs."
                         )
                         .font(.system(size: 11.5)).foregroundStyle(.secondary)
                     }
@@ -170,8 +170,10 @@ struct AddSiteView: View {
             Spacer()
             Button("Cancel", action: close).keyboardShortcut(.cancelAction)
             Button("Add site") { model.add() }
-                .keyboardShortcut(.defaultAction)
                 .disabled(!model.canAdd)
+            Button("Add and run setup") { model.add(runSetup: true) }
+                .keyboardShortcut(.defaultAction)
+                .disabled(!model.canAdd || (model.plan.map { PlanRunner.selectedSteps($0) } ?? []).isEmpty)
         }
     }
 }

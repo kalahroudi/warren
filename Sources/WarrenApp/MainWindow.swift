@@ -5,6 +5,7 @@ import SwiftUI
 struct MainWindowView: View {
     @ObservedObject var model: AppModel
     @ObservedObject var runtimes: RuntimesModel
+    @ObservedObject var setupRun: SetupRunModel
     let addSite: () -> Void
 
     var body: some View {
@@ -31,12 +32,18 @@ struct MainWindowView: View {
                 .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
         }
         .frame(minWidth: 960, minHeight: 620)
+        .sheet(item: $setupRun.pendingApproval) { approval in
+            ApprovalSheet(approval: approval) { approved, trust in
+                setupRun.resolve(approval, approved: approved, trust: trust)
+            }
+            .interactiveDismissDisabled()
+        }
     }
 
     @ViewBuilder
     private var detail: some View {
         switch model.section {
-        case .sites: SitesView(model: model, runtimes: runtimes, addSite: addSite)
+        case .sites: SitesView(model: model, runtimes: runtimes, setupRun: setupRun, addSite: addSite)
         case .services: ServicesView(model: model)
         case .runtimes: RuntimesView(model: model, runtimes: runtimes)
         case .agents: AgentsView(model: model)

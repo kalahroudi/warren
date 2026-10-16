@@ -5,10 +5,20 @@
 ## What Warren shows
 
 - **What Warren found**: the framework and how it starts (see [frameworks](frameworks.md)), the runtimes the project needs and whether they are installed, the package manager, and the services the project seems to want.
-- **Setup plan**: ordered steps, each *done*, *to do* or *waiting*. Steps that run code that came with the project (install scripts, `artisan`, a project's own setup script) are marked **Runs code from this project**. Running the plan, with approval of each command, arrives with spec 012.
+- **Setup plan**: ordered steps, each *done*, *to do* or *waiting*. Steps that run code that came with the project (install scripts, `artisan`, a project's own setup script) are marked **Runs code from this project**. Press **Run setup** (or **Add and run setup** in the window) to run it.
 - **Name and domain**: filled from the folder name (`shop` and `shop.test`) and checked as you type. They are stored with the site in Warren. Nothing is written into the project. A `.warren.toml` that sets the same field wins.
 
 After the site is added, the plan stays on its page as a **Setup** card, re-checked against the machine each time the page is opened.
+
+## Running it
+
+- **Approval.** Before any code that came with the project runs, a sheet lists the exact commands and the folder. You can switch single commands off. Approval is for this run only.
+- **Trust this project** (off by default) remembers those exact commands for the site, so they run without the sheet next time. A command that changes asks again. **Stop trusting** on the site's page clears it.
+- **Progress.** Each step shows a spinner, the latest line of output, and a **Log** you can open. **Stop** ends the running command and everything it started.
+- **Failures.** A failed step shows what went wrong and a plain next action when it recognises the cause. Fix it and **Run again**; finished steps are not repeated.
+- **Logs** are in `logs/setup/<site>/<step>.log`, replaced by the next run of that step.
+- Steps that cannot be checked from files (migrations) are remembered after they succeed, in `config/setup-runs.json`, while the command stays the same.
+- pnpm and Yarn are installed through mise, at the version `packageManager` names or the latest.
 
 ## The steps
 
@@ -29,4 +39,5 @@ After the site is added, the plan stays on its page as a **Setup** card, re-chec
 
 ```sh
 warren site plan <site or folder> [--json]
+warren site setup <site> [--yes] [--dry-run]   # asks [y/N] before each command that runs project code
 ```

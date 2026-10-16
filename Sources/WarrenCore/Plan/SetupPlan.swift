@@ -3,7 +3,7 @@
 import Foundation
 
 public enum PlanStepKind: String, Codable, Sendable {
-    case runtime, dependencies, envFile, service, application, database, optional, site
+    case runtime, packageManager, dependencies, envFile, service, application, database, optional, site
 }
 
 public enum PlanStepState: Equatable, Codable, Sendable {
@@ -30,6 +30,8 @@ public struct PlanStep: Identifiable, Equatable, Codable, Sendable {
     public var state: PlanStepState
     public let waitsFor: [String]
     public let enabledByDefault: Bool
+    /// What a step Warren performs itself needs to know, such as the tool and version to install.
+    public var payload: [String: String] = [:]
 
     public var commandLine: String? {
         command?.map { $0.contains(" ") ? "\"\($0)\"" : $0 }.joined(separator: " ")
@@ -43,6 +45,7 @@ public struct PlannedRuntime: Equatable, Codable, Sendable {
     public let installedVersion: String?
     /// True when the project names no version and Warren suggests one.
     public let proposed: Bool
+    public let requirement: RuntimeRequirement
 }
 
 public struct EnvSummary: Equatable, Codable, Sendable {

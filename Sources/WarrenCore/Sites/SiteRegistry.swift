@@ -9,6 +9,8 @@ public struct RegisteredSite: Codable, Equatable, Sendable {
     /// Name and domains chosen when adding the site. A `.warren.toml` that sets the same field wins.
     public var name: String?
     public var domains: [String]?
+    /// Commands the user approved with "Trust this project", exactly as they were shown (spec 012).
+    public var trustedCommands: [[String]]?
 }
 
 /// A registered site with its `.warren.toml` applied over the defaults.
@@ -127,6 +129,20 @@ public struct SiteRegistry: Sendable {
                 throw RegistryError.domainConflict(domain: clash, otherSite: other.id)
             }
         }
+    }
+
+    /// The commands this site is trusted to run without asking again. Empty means not trusted.
+    public func trustedCommands(id: String) throws -> [[String]] {
+        guard let site = try load().sites.first(where: { $0.id == id }) else { throw RegistryError.unknownSite(id) }
+        return site.trustedCommands ?? []
+    }
+
+    /// Trusts exactly these commands for the site, or clears the trust when the list is empty.
+    public func setTrustedCommands(id: String, _ commands: [[String]]) throws {
+        var contents = try load()
+        guard let index = contents.sites.firstIndex(where: { $0.id == id }) else { throw RegistryError.unknownSite(id) }
+        contents.sites[index].trustedCommands = commands.isEmpty ? nil : commands
+        try save(contents)
     }
 
     public func remove(id: String) throws {

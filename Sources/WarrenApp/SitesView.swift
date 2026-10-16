@@ -7,6 +7,7 @@ import WarrenCore
 struct SitesView: View {
     @ObservedObject var model: AppModel
     @ObservedObject var runtimes: RuntimesModel
+    @ObservedObject var setupRun: SetupRunModel
     let addSite: () -> Void
 
     var body: some View {
@@ -28,7 +29,10 @@ struct SitesView: View {
             }
         }
         .padding(24)
-        .onAppear { runtimes.reload() }
+        .onAppear {
+            runtimes.reload()
+            model.selectedSiteID.map(setupRun.loadTrust)
+        }
     }
 
     private var list: some View {
@@ -140,17 +144,72 @@ struct SitesView: View {
         .background(Color.warrenCard, in: RoundedRectangle(cornerRadius: 16))
     }
 
-    /// What is left to do for the site: the setup plan, checked against the machine each time. Hidden once complete.
+    /// What is left to do for the site, and the button to do it. During and after a run it shows live progress.
+    /// Hidden once complete.
     @ViewBuilder
     private func setupCard(_ site: Site) -> some View {
-        if model.snapshot.isLive, let plan = runtimes.setups[site.id], !plan.isComplete {
-            Card {
-                VStack(alignment: .leading, spacing: 10) {
-                    SectionLabel(text: "Setup")
-                    PlanStepList(steps: plan.steps.filter { $0.kind != .site })
-                    Text("Running the plan from here arrives with the next spec.")
-                        .font(.system(size: 11.5)).foregroundStyle(.secondary)
+        if model.snapshot.isLive {
+            if setupRun.isShowing(site.id) {
+                runCard(site)
+            } else if let plan = runtimes.setups[site.id], !plan.isComplete {
+                Card {
+                    VStack(alignment: .leading, spacing: 10) {
+                        HStack {
+                            SectionLabel(text: "Setup")
+                            Spacer()
+                            Button("Run setup") { setupRun.start(siteID: site.id) }
+                                .disabled(setupRun.running || PlanRunner.selectedSteps(plan).isEmpty)
+                        }
+                        PlanStepList(steps: plan.steps.filter { $0.kind != .site })
+                        trustLine(site)
+                    }
                 }
+            }
+        }
+    }
+
+    private func runCard(_ site: Site) -> some View {
+        Card {
+            VStack(alignment: .leading, spacing: 10) {
+                HStack {
+                    SectionLabel(text: setupRun.running ? "Setting up" : "Setup")
+                    Spacer()
+                    if setupRun.running {
+                        Button("Stop") { setupRun.stop() }
+                    } else {
+                        Button("Run again") { setupRun.start(siteID: site.id) }
+                    }
+                }
+                PlanStepList(steps: setupRun.steps, progress: setupRun.progress)
+                if let summary = setupRun.summary {
+                    Text(summaryText(summary)).font(.system(size: 12)).foregroundStyle(.secondary)
+                }
+                trustLine(site)
+            }
+        }
+    }
+
+    private func summaryText(_ summary: RunSummary) -> String {
+        if summary.cancelled {
+            return "Stopped. Run again to continue where it left off."
+        }
+        if summary.succeeded {
+            return "Done."
+        }
+        if summary.failed.isEmpty {
+            return "Some steps were skipped. Run again to approve them."
+        }
+        let count = summary.failed.count
+        return "\(count) step\(count == 1 ? "" : "s") failed. Fix the cause and run again; finished steps are not repeated."
+    }
+
+    @ViewBuilder
+    private func trustLine(_ site: Site) -> some View {
+        if (setupRun.trusted[site.id] ?? 0) > 0 {
+            HStack {
+                Text("Trusted: these commands run without asking.").font(.system(size: 11.5))
+                    .foregroundStyle(.secondary)
+                Button("Stop trusting") { setupRun.stopTrusting(site.id) }.font(.system(size: 11.5))
             }
         }
     }

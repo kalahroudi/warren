@@ -17,10 +17,10 @@ final class AddSiteModel: ObservableObject {
     @Published private(set) var adding = false
 
     private let paths: WarrenPaths
-    private let onAdded: (ResolvedSite) -> Void
+    private let onAdded: (ResolvedSite, Bool) -> Void
     private var generation = 0
 
-    init(paths: WarrenPaths, onAdded: @escaping (ResolvedSite) -> Void) {
+    init(paths: WarrenPaths, onAdded: @escaping (ResolvedSite, Bool) -> Void) {
         self.paths = paths
         self.onAdded = onAdded
     }
@@ -102,7 +102,7 @@ final class AddSiteModel: ObservableObject {
         return Built(site: site, plan: plan, problem: problem)
     }
 
-    func add() {
+    func add(runSetup: Bool = false) {
         guard let folder, canAdd else { return }
         adding = true
         let (paths, name, domain) = (paths, name, domain.trimmingCharacters(in: .whitespaces))
@@ -116,7 +116,7 @@ final class AddSiteModel: ObservableObject {
                     return site
                 }.value
                 adding = false
-                onAdded(site)
+                onAdded(site, runSetup)
             } catch {
                 adding = false
                 problem = error.localizedDescription

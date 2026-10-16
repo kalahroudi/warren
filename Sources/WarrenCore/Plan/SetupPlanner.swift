@@ -11,7 +11,9 @@ public struct SetupPlanner: Sendable {
     }
 
     /// `registered` says whether the site is already in the registry, which decides the last step's state.
-    public func plan(for site: ResolvedSite, registered: Bool, inventory: [InstalledRuntime]) -> SetupPlan {
+    public func plan(
+        for site: ResolvedSite, registered: Bool, inventory: [InstalledRuntime], tools: [InstalledTool] = []
+    ) -> SetupPlan {
         let directory = URL(fileURLWithPath: site.path, isDirectory: true)
         let files = ProjectFiles(directory: directory)
         let detection = FrameworkDetector.detect(site: site)
@@ -21,11 +23,12 @@ public struct SetupPlanner: Sendable {
         let runtimes = plannedRuntimes(site: site, detection: detection, inventory: inventory)
         var steps: [PlanStep] = []
         steps += runtimeSteps(runtimes)
+        if let tool = packageManagerStep(detection: detection, files: files, tools: tools) {
+            steps.append(tool)
+        }
         let runtimeIDs = steps.filter { !$0.state.isDone }.map(\.id)
 
-        if let dependencies = dependenciesStep(detection: detection, files: files, waitsFor: runtimeIDs) {
-            steps.append(dependencies)
-        }
+        steps += dependenciesSteps(detection: detection, files: files, waitsFor: runtimeIDs)
         let envStep = envFileStep(envInfo, directory: directory)
         if let envStep {
             steps.append(envStep)
@@ -42,68 +45,39 @@ public struct SetupPlanner: Sendable {
             envExists: envInfo.current != nil,
             emptyVariables: envInfo.example?.file.emptyKeys ?? []
         )
+        steps = applyingMemory(to: steps, site: site.id)
         return SetupPlan(
             siteID: site.id, folder: site.path, detection: detection, runtimes: runtimes,
             env: summary, services: services, steps: steps
         )
     }
 
-    // MARK: Runtimes
-
-    private func plannedRuntimes(site: ResolvedSite, detection: FrameworkDetection, inventory: [InstalledRuntime])
-        -> [PlannedRuntime]
-    {
-        var requirements = RuntimeResolver.requirements(for: site)
-        var proposed = Set<RuntimeKind>()
-        if let implied = impliedRuntime(detection), !requirements.contains(where: { $0.kind == implied }) {
-            let version = implied == .node ? "lts" : "latest"
-            requirements.append(RuntimeRequirement(kind: implied, requested: version, source: .warrenConfig))
-            proposed.insert(implied)
-        }
-        return requirements.map { requirement in
-            let installed = inventory.filter { $0.kind == requirement.kind }.map(\.version)
-            return PlannedRuntime(
-                label: requirement.label,
-                source: proposed.contains(requirement.kind) ? "suggested" : requirement.source.label,
-                installedVersion: RuntimeResolver.match(requirement, among: installed),
-                proposed: proposed.contains(requirement.kind)
-            )
+    /// Steps that cannot be checked from files count as done while the command that ran is the command in the plan.
+    private func applyingMemory(to steps: [PlanStep], site: String) -> [PlanStep] {
+        let remembered = SetupRunStore(paths: paths).completed(site: site)
+        return steps.map { step in
+            guard Self.isRemembered(step), let command = step.command, remembered[step.id]?.command == command
+            else { return step }
+            var done = step
+            done.state = .done
+            return done
         }
     }
 
-    /// The runtime a project needs even when it names no version.
-    private func impliedRuntime(_ detection: FrameworkDetection) -> RuntimeKind? {
-        switch detection.packageManager {
-        case .npm, .pnpm, .yarn: .node
-        case .bun: .bun
-        case .composer: .php
-        case .uvCLI, .pip: .python
-        case nil: detection.kind == .php ? .php : nil
-        }
-    }
-
-    private func runtimeSteps(_ runtimes: [PlannedRuntime]) -> [PlanStep] {
-        runtimes.map { runtime in
-            let name = runtime.label
-            let detail = runtime.proposed
-                ? "The project names no version, so Warren suggests the newest. Downloaded into Warren's folder."
-                : "From \(runtime.source). Downloaded into Warren's folder."
-            return PlanStep(
-                id: "runtime-\(name.split(separator: " ").first.map { $0.lowercased() } ?? "runtime")",
-                kind: .runtime, title: runtime.installedVersion == nil ? "Install \(name)" : "\(name) installed",
-                detail: runtime.installedVersion.map { "Using \($0)." } ?? detail, command: nil,
-                runsProjectCode: false, state: runtime.installedVersion == nil ? .todo : .done,
-                waitsFor: [], enabledByDefault: true
-            )
-        }
+    /// Steps whose outcome cannot be seen in the folder: migrations, the project's own steps, pip installs.
+    static func isRemembered(_ step: PlanStep) -> Bool {
+        step.kind == .database || step.kind == .optional || (step.id == "dependencies" && step.command?.starts(with: [
+            "uv",
+            "pip"
+        ]) == true)
     }
 
     // MARK: Dependencies
 
-    private func dependenciesStep(detection: FrameworkDetection, files: ProjectFiles,
-                                  waitsFor: [String]) -> PlanStep?
+    private func dependenciesSteps(detection: FrameworkDetection, files: ProjectFiles,
+                                   waitsFor: [String]) -> [PlanStep]
     {
-        guard let manager = detection.packageManager else { return nil }
+        guard let manager = detection.packageManager else { return [] }
         let command: [String]
         let folder: String
         let lockfile: String?
@@ -134,17 +108,31 @@ public struct SetupPlanner: Sendable {
         case .uvCLI:
             (command, folder, lockfile) = (["uv", "sync"], ".venv", files.exists("uv.lock") ? "uv.lock" : nil)
         case .pip:
-            guard files.exists("requirements.txt") else { return nil }
+            guard files.exists("requirements.txt") else { return [] }
             (command, folder, lockfile) = (["uv", "pip", "install", "-r", "requirements.txt"], ".venv", nil)
         }
-        let done = isInstalled(folder, lockfile: lockfile, in: files)
+        // A virtual environment says nothing about what is in it, so pip's step relies on the run memory.
+        let done = manager == .pip ? false : isInstalled(folder, lockfile: lockfile, in: files)
         let detail = done ? "\(folder) is up to date." : dependenciesDetail(manager, hasLockfile: lockfile != nil)
-        return PlanStep(
+        var result: [PlanStep] = []
+        var waits = waitsFor
+        if manager == .pip {
+            let exists = files.exists(".venv")
+            result.append(PlanStep(
+                id: "venv", kind: .dependencies,
+                title: exists ? "Virtual environment exists" : "Create a virtual environment",
+                detail: ".venv in the project folder.", command: ["uv", "venv"], runsProjectCode: false,
+                state: exists ? .done : .todo, waitsFor: waitsFor, enabledByDefault: true
+            ))
+            waits = waitsFor + (exists ? [] : ["venv"])
+        }
+        result.append(PlanStep(
             id: "dependencies", kind: .dependencies,
             title: done ? "Dependencies installed" : "Install dependencies", detail: detail,
-            command: manager == .pip ? ["uv", "venv", "&&"] + command : command, runsProjectCode: true,
-            state: done ? .done : .todo, waitsFor: waitsFor, enabledByDefault: true
-        )
+            command: command, runsProjectCode: true, state: done ? .done : .todo, waitsFor: waits,
+            enabledByDefault: true
+        ))
+        return result
     }
 
     private func dependenciesDetail(_ manager: PackageManager, hasLockfile: Bool) -> String {
@@ -264,58 +252,5 @@ public struct SetupPlanner: Sendable {
             detail: "Runs the project's migrations. Safe to run again.", command: command, runsProjectCode: true,
             state: state, waitsFor: before.map(\.id) + (waitingService.map { [$0.id] } ?? []), enabledByDefault: true
         )]
-    }
-
-    // MARK: Steps the project suggests
-
-    private func optionalSteps(directory: URL, files: ProjectFiles, detection: FrameworkDetection) -> [PlanStep] {
-        var result: [PlanStep] = []
-        if let command = devContainerCommand(in: directory) {
-            result.append(PlanStep(
-                id: "optional-devcontainer", kind: .optional, title: "Run the project's dev container setup",
-                detail: "postCreateCommand from devcontainer.json. Off unless you turn it on.",
-                command: command, runsProjectCode: true, state: .todo, waitsFor: [], enabledByDefault: false
-            ))
-        }
-        let manager = detection.packageManager ?? .npm
-        if files.hasPackageJSON, let name = ["setup", "bootstrap"].first(where: { files.scripts[$0] != nil }) {
-            result.append(PlanStep(
-                id: "optional-script-\(name)", kind: .optional, title: "Run the project's \(name) script",
-                detail: "The \"\(name)\" script from package.json. Off unless you turn it on.",
-                command: [manager.rawValue, "run", name], runsProjectCode: true, state: .todo, waitsFor: [],
-                enabledByDefault: false
-            ))
-        }
-        return result
-    }
-
-    /// `postCreateCommand` from `devcontainer.json` (a string or an argument array). The file may carry comments.
-    func devContainerCommand(in directory: URL) -> [String]? {
-        for name in [".devcontainer/devcontainer.json", ".devcontainer.json"] {
-            guard let text = try? String(contentsOf: directory.appendingPathComponent(name), encoding: .utf8)
-            else { continue }
-            let cleaned = text.split(separator: "\n", omittingEmptySubsequences: false)
-                .filter { !$0.trimmingCharacters(in: .whitespaces).hasPrefix("//") }.joined(separator: "\n")
-            guard let json = try? JSONSerialization.jsonObject(with: Data(cleaned.utf8)) as? [String: Any]
-            else { continue }
-            if let text = json["postCreateCommand"] as? String, !text.isEmpty {
-                return ["/bin/sh", "-c", text]
-            }
-            if let list = json["postCreateCommand"] as? [String], !list.isEmpty {
-                return list
-            }
-        }
-        return nil
-    }
-
-    private func siteStep(_ site: ResolvedSite, registered: Bool) -> PlanStep {
-        let domain = site.domains.first ?? "\(site.id).test"
-        return PlanStep(
-            id: "site", kind: .site, title: registered ? "Site added" : "Add the site at https://\(domain)",
-            detail: registered ? "https://\(domain)" :
-                "Registers the folder with Warren. Nothing in the project changes.",
-            command: nil, runsProjectCode: false, state: registered ? .done : .todo, waitsFor: [],
-            enabledByDefault: true
-        )
     }
 }

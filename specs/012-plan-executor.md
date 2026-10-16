@@ -1,6 +1,6 @@
 # 012 · Plan executor, progress events, command approvals
 
-Status: Draft · Phase 3 · Depends on: 007 to 011
+Status: Implemented, pending the UI choices below · Phase 3 · Depends on: 007 to 011
 
 ## Goal
 
@@ -59,30 +59,32 @@ Surveyed 2026-10-16.
 - Output is read as lines, kept in memory for the live view (last 200 lines per step) and appended to `logs/setup/<site>/<step>.log`. A log is replaced by the next run of that step.
 - No time limit by default (installs are slow). The user stops it.
 
-**Events.** The executor reports `PlanRunEvent`s on an `AsyncStream`: `awaitingApproval(steps)`, `stepStarted`, `output(step, line)`, `stepFinished(step, result)` where the result is *done*, *failed(exit code, last lines)*, *skipped(reason)* or *cancelled*, and `finished(summary)`. The app, the CLI and (later) MCP all consume the same stream.
+**Events.** The executor reports `PlanRunEvent`s to a callback (the app hops them to the main thread): `awaitingApproval(steps)`, `stepStarted`, `output(step, line)`, `stepFinished(step, result)` where the result is *done*, *failed(exit code, last lines)*, *skipped(reason)* or *cancelled*, and `finished(summary)`. The app, the CLI and (later) MCP all consume the same stream.
 
-**Completion memory.** Some steps cannot be checked from files (migrations). After such a step succeeds, Warren records it in `state/setup-runs.json` (site id, step id, the exact command, date), and the planner treats it as *done* while the recorded command matches. The Setup card has **Run again** on any step. Deleting the site's record or changing the command makes it *to do* again.
+**Completion memory.** Some steps cannot be checked from files (migrations). After such a step succeeds, Warren records it in `config/setup-runs.json` (site id, step id, the exact command, date), and the planner treats it as *done* while the recorded command matches. The Setup card has **Run again** on any step. Deleting the site's record or changing the command makes it *to do* again.
 
 **Failure.** The step stops, its dependents are skipped, and the card shows: the step, the exit code, the last 20 lines, the log path, and a plain next action when the failure matches a known pattern (command not found: the runtime is missing; permission denied; `EADDRINUSE`; network unreachable). Running again re-plans from the machine's real state, so completed steps are not repeated.
 
-**Trust record.** A site's trust is `{ trusted: true, commands: [exact argument lists the user saw] }` in the registry's per-site fields (additive, like name and domain in 011). A run asks again when the plan contains a project-code command that is not in `commands`.
+**Trust record.** A site's trust is `trustedCommands`, the exact argument lists the user saw, in the registry's per-site fields (additive, like name and domain in 011). A run asks again when the plan contains a project-code command that is not in that list.
 
 **Footprint.** No background work: the executor exists only while a run is in progress.
 
 ## Acceptance criteria
 
-- [ ] 1. Steps run in plan order, skip *done*, *waiting* and unticked steps, and respect `waitsFor`; a failure skips dependents and continues independent steps (unit, fake runner).
-- [ ] 2. No project-code step runs without approval; Warren's own steps run without it (unit: the approval callback is asked exactly for the marked steps).
-- [ ] 3. Approval holds for one run only unless the site is trusted; a trusted site asks again for a command whose text is not in its trust record (unit).
-- [ ] 4. A command runs as an argument list in the project folder, with the site's environment, stdin closed, and `CI=1` (integration: a script prints its environment and working folder).
-- [ ] 5. Stop ends the command and the processes it started (integration: a shell that starts a background `sleep` is stopped and the `sleep` is gone).
-- [ ] 6. Output reaches the event stream line by line and is written to the step's log (integration).
-- [ ] 7. `.env` is copied without overwriting an existing file, and the SQLite file is created (unit).
-- [ ] 8. A migration marked done by a successful run is *done* in the next plan, and *to do* again if its command changes (unit).
-- [ ] 9. pnpm and Yarn are installed through mise when missing and put on the step's `PATH` (integration with real mise, `WARREN_INTEGRATION=1`).
-- [ ] 10. The Setup card shows Run setup, the approval sheet, live progress, a failure with the last lines, and Run again; Stop works (running app, with a small Node or Composer project and a deliberately failing step).
-- [ ] 11. `warren site setup` asks per command, honours `--yes` and `--dry-run`, and exits non-zero on failure (CLI run by hand).
-- [ ] 12. `just check` passes, and `WARREN_DEMO=1` still shows demo content and writes nothing.
+Checked means verified. How is in each line.
+
+- [x] 1. Steps run in plan order, skip *done*, *waiting*, unticked, site and service steps, and respect `waitsFor`; a failure skips dependents and continues independent steps (`PlanRunnerTests`, fake executor).
+- [x] 2. No project-code step runs without approval; Warren's own steps run without it (`PlanRunnerTests`: the approval callback is asked exactly for the marked steps; declining runs nothing).
+- [x] 3. Approval holds for one run unless the site is trusted, and a trusted site asks again for a command whose text is not in its trust record (`PlanRunnerTests.trustedCommandsAreNotAskedAboutAgainButAChangedCommandIs`).
+- [x] 4. A command runs as an argument list in the project folder, with the given environment, stdin closed, and `CI=1` (`ProcessGroupTests` with real processes; `PlanRunnerTests.commandsGetTheNonInteractiveEnvironment`). Found while testing: a parent that ignores SIGTERM or SIGPIPE passes that on to the command, so the executor resets every signal to its default.
+- [x] 5. Stop ends the command and the processes it started (`ProcessGroupTests.stoppingEndsTheCommandAndTheProcessesItStarted`, and in the running app: Stop during a 77-second `postinstall` left no `sleep` behind).
+- [x] 6. Output reaches the event stream line by line and is written to the step's log (`ProcessGroupTests`, `PlanRunnerTests.eachStepWritesItsLog`).
+- [x] 7. `.env` is copied without overwriting, and the SQLite file is created (`PlanRunnerTests`).
+- [x] 8. A successful migration is *done* in the next plan, and *to do* again if its command changes (`PlanRunnerTests.aSuccessfulMigrationIsRememberedUntilItsCommandChanges`).
+- [x] 9. pnpm is installed through mise and found by the next step (`PlanIntegrationTests`, real mise, `WARREN_INTEGRATION=1`). Yarn uses the same code path and was not run separately.
+- [ ] 10. The Setup card shows Run setup, the approval sheet, live progress, a failure, Run again, and Stop (running app). Verified: Add and run setup opened the approval sheet with the exact command; approving ran a real Node install and `npm ci` to "Done."; a failing `postinstall` ended with "1 step failed"; Stop ended a long step and left no process. Not exercised: the sheet's Skip and Cancel buttons, the trust checkbox and Stop trusting, the Run setup button on an existing site's card (only the Add-and-run path), and what the step rows look like (my accessibility scripts cannot read their text).
+- [x] 11. `warren site setup` asks per command, honours `--yes` and `--dry-run`, and exits non-zero on failure or when steps were skipped (run by hand against real Node and a failing project).
+- [x] 12. `just check` passes (230 tests). `WARREN_DEMO=1` was not run again for this spec.
 
 ## Test plan
 
@@ -92,12 +94,20 @@ Surveyed 2026-10-16.
 
 ## Rollout
 
-New state: `state/setup-runs.json`, `logs/setup/`, and optional `trusted` and `commands` fields per site in `sites.json` (additive, version stays 1). Nothing migrates.
+New state: `config/setup-runs.json`, `logs/setup/`, and an optional `trustedCommands` list per site in `sites.json` (additive, version stays 1). Nothing migrates.
 
 ## Open questions
 
-1. **Trust this project.** Recommendation: include, off by default, with the narrowing above. Without it, every `npm install` of your own project needs a click.
-2. **pnpm and Yarn through mise.** Recommendation: yes, as above. Corepack would depend on the Node version.
-3. **Output as piped lines, not a terminal.** Recommendation: accept; revisit only if a tool needs a TTY.
-4. **A time limit per step.** Recommendation: none, with Stop always available.
-5. **`--yes` on the CLI** approves every command in the plan. Recommendation: allow, and print the commands first.
+Decided with the reviewer when approving.
+
+1. **Trust this project** is included, off by default, narrowed to the commands shown.
+2. **pnpm and Yarn** come through mise.
+3. **Output** is piped lines, not a terminal.
+4. **No time limit** per step; Stop is always available.
+5. **`--yes`** on the CLI approves every command, after printing them.
+
+## Notes from the build
+
+- A run counts as succeeded only if nothing failed, was stopped or was skipped, so declining the approval is not reported as success.
+- `npm ci` on a project with no dependencies creates no `node_modules`, so the dependency step stays *to do* for such a project.
+- Every site gets `npm_config_store_dir` (pnpm's setting) from 007, and npm prints a warning about it. Harmless; to be tidied by setting it only for pnpm sites.

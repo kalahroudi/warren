@@ -13,7 +13,15 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSPopoverDelegate {
         paths: .fromEnvironment(),
         enabled: ProcessInfo.processInfo.environment["WARREN_DEMO"] != "1"
     )
-    private lazy var windows = WindowManager(model: model, setup: setup, runtimes: runtimes)
+    private lazy var setupRun = SetupRunModel(
+        paths: .fromEnvironment(),
+        enabled: ProcessInfo.processInfo.environment["WARREN_DEMO"] != "1"
+    ) { [weak self] in
+        self?.runtimes.reload()
+        self?.model.refresh()
+    }
+
+    private lazy var windows = WindowManager(model: model, setup: setup, runtimes: runtimes, setupRun: setupRun)
     private var item: NSStatusItem!
     private let popover = NSPopover()
 

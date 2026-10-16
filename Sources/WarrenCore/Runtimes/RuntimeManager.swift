@@ -41,6 +41,10 @@ public struct RuntimeManager: Sendable {
         try mise.installed() + php.installed() + uvTool.installed()
     }
 
+    public func installedTools() throws -> [InstalledTool] {
+        try mise.installedTools()
+    }
+
     /// Stable releases, newest last.
     public func available(_ kind: RuntimeKind) async throws -> [String] {
         if kind == .php {

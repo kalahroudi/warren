@@ -26,6 +26,19 @@ public struct InstalledRuntime: Equatable, Hashable, Identifiable, Sendable {
     }
 }
 
+/// A tool mise installed that is not a runtime, such as pnpm or Yarn.
+public struct InstalledTool: Equatable, Sendable {
+    public let name: String
+    public let version: String
+    public let path: URL
+
+    /// The folder to put on `PATH`: pnpm sits at the top of its folder, Yarn in `bin`.
+    public var binDirectory: URL {
+        let bin = path.appendingPathComponent("bin")
+        return FileManager.default.fileExists(atPath: bin.path) ? bin : path
+    }
+}
+
 /// Drives the managed mise binary. Everything it touches lives inside Warren's folder, and a project's own
 /// mise files can never run commands (`MISE_NO_ENV`). See spec 007.
 public struct MiseTool: Sendable {
@@ -152,6 +165,57 @@ public struct MiseTool: Sendable {
         try FileManager.default.createDirectory(at: neutralDirectory, withIntermediateDirectories: true)
         let result = try await Shell.stream(
             executable, ["install", "\(kind.rawValue)@\(version)"],
+            environment: environment(), directory: neutralDirectory,
+            onLine: { line in
+                if !Self.isNoise(line) {
+                    onProgress(line)
+                }
+            }
+        )
+        try Task.checkCancellation()
+        guard result.status == 0 else { throw RuntimeError.toolFailed(Self.lastLine(of: result.output)) }
+    }
+
+    /// Every installed tool that is not a runtime.
+    public func installedTools() throws -> [InstalledTool] {
+        guard isInstalled else { return [] }
+        return try Self.parseTools(run(["ls", "--json"]))
+    }
+
+    static func parseTools(_ json: String) throws -> [InstalledTool] {
+        struct Entry: Decodable {
+            let version: String
+            let installPath: String?
+            let installed: Bool?
+
+            enum CodingKeys: String, CodingKey {
+                case version
+                case installPath = "install_path"
+                case installed
+            }
+        }
+        let listing = try JSONDecoder().decode([String: [Entry]].self, from: Data(json.utf8))
+        return listing.flatMap { name, entries in
+            entries.compactMap { entry -> InstalledTool? in
+                guard RuntimeKind(rawValue: name) == nil, entry.installed != false, let path = entry.installPath
+                else { return nil }
+                return InstalledTool(
+                    name: name,
+                    version: entry.version,
+                    path: URL(fileURLWithPath: path, isDirectory: true)
+                )
+            }
+        }.sorted { ($0.name, $0.version) < ($1.name, $1.version) }
+    }
+
+    /// Installs a tool such as `pnpm` at a version (`9.1.0` or `latest`).
+    public func installTool(
+        _ name: String, version: String, onProgress: @escaping @Sendable (String) -> Void = { _ in }
+    ) async throws {
+        try await ensureInstalled()
+        try FileManager.default.createDirectory(at: neutralDirectory, withIntermediateDirectories: true)
+        let result = try await Shell.stream(
+            executable, ["install", "\(name)@\(version)"],
             environment: environment(), directory: neutralDirectory,
             onLine: { line in
                 if !Self.isNoise(line) {
