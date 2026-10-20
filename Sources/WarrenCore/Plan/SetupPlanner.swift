@@ -116,8 +116,14 @@ public struct SetupPlanner: Sendable {
             (command, folder, lockfile) = (["uv", "pip", "install", "-r", "requirements.txt"], ".venv", nil)
         }
         // A virtual environment says nothing about what is in it, so pip's step relies on the run memory.
-        let done = manager == .pip ? false : isInstalled(folder, lockfile: lockfile, in: files)
-        let detail = done ? "\(folder) is up to date." : dependenciesDetail(manager, hasLockfile: lockfile != nil)
+        // npm leaves no node_modules behind when the project lists no packages at all.
+        let nothingToInstall = [.npm, .pnpm, .yarn, .bun].contains(manager) && files.nodeDependencies.isEmpty
+        let done = manager == .pip ? false : nothingToInstall || isInstalled(folder, lockfile: lockfile, in: files)
+        let detail = nothingToInstall ? "The project lists no packages." : done ? "\(folder) is up to date." :
+            dependenciesDetail(
+                manager,
+                hasLockfile: lockfile != nil
+            )
         var result: [PlanStep] = []
         var waits = waitsFor
         if manager == .pip {

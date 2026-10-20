@@ -92,7 +92,8 @@ struct FrameworkTests {
             "package.json": package(dev: ["vite"], scripts: ["dev": "vite"]),
         ])
         #expect(found.id == "laravel" && found.kind == .php && found.documentRoot == "public")
-        #expect(found.command == nil && found.packageManager == .npm)
+        // The package.json is for assets; the project is still installed with Composer.
+        #expect(found.command == nil && found.packageManager == .composer)
         #expect(found.startLine == "Served by PHP-FPM from public/")
     }
 

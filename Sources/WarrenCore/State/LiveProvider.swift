@@ -10,10 +10,12 @@ public final class LiveProvider: StateProvider {
     private let network: NetworkServices
     private let preview = FixtureProvider()
     private let assessor: SetupAssessor
+    private let processes: SiteProcesses
     private var notice: String?
 
-    public init(paths: WarrenPaths, network: NetworkServices? = nil) {
+    public init(paths: WarrenPaths, network: NetworkServices? = nil, processes: SiteProcesses? = nil) {
         self.paths = paths
+        self.processes = processes ?? SiteProcesses(paths: paths)
         let network = network ?? NetworkServices(paths: paths)
         self.network = network
         assessor = SetupAssessor(paths: paths, network: network)
@@ -36,7 +38,7 @@ public final class LiveProvider: StateProvider {
         snapshot.notice = notice
         // There is only something to pause once local HTTPS or DNS has been set up.
         snapshot.capabilities = Capabilities(
-            canControlSites: false,
+            canControlSites: true,
             canPause: paused || network.proxy.isInstalled || network.dns.isInstalled
         )
         snapshot.isLive = true
@@ -44,7 +46,7 @@ public final class LiveProvider: StateProvider {
         return snapshot
     }
 
-    /// Starting and stopping a site's own dev server arrives with the process manager.
+    /// Starting needs the user's answer to an approval, so the app does it through `SiteRunModel`.
     public func setSite(_: String, running _: Bool) {}
 
     public func setService(_ id: String, running: Bool) {
@@ -84,19 +86,46 @@ public final class LiveProvider: StateProvider {
         return ((try? SiteRegistry(paths: paths).list()) ?? []).map { site in
             let runtime = RuntimeResolver.requirements(for: site).map(\.label).joined(separator: ", ")
             let label = runtime.isEmpty ? Self.noRuntime : runtime
-            let listening = site.port.map(PortCheck.isListening) ?? false
             let detection = FrameworkDetector.detect(site: site)
+            let run = Self.runState(processes.state(of: site, detection: detection))
+            let port = site.port ?? processes.ports.assigned(for: site.id)
             return Site(
                 id: site.id,
                 domain: site.domains.first ?? site.id,
                 stack: detection.displayName,
                 runtime: label,
-                detail: site.port.map { ":\($0)" } ?? "no port set",
+                detail: port.map { ":\($0)" } ?? Self.detail(for: detection),
                 path: site.path.hasPrefix(home) ? "~" + site.path.dropFirst(home.count) : site.path,
-                state: listening ? .running : .stopped,
+                state: run.state,
                 relayURL: nil,
-                startLine: detection.id == nil && detection.command == nil ? "" : detection.startLine
+                startLine: detection.id == nil && detection.command == nil ? "" : detection.startLine,
+                managed: run.managed,
+                exitCode: run.exitCode
             )
+        }
+    }
+
+    private struct RunInfo {
+        var state: RunState
+        var managed = true
+        var exitCode: Int32?
+    }
+
+    private static func runState(_ state: SiteRunState) -> RunInfo {
+        switch state {
+        case .stopped: RunInfo(state: .stopped)
+        case .starting: RunInfo(state: .starting)
+        case let .running(managed): RunInfo(state: .running, managed: managed)
+        case let .crashed(code): RunInfo(state: .crashed, exitCode: code)
+        }
+    }
+
+    private static func detail(for detection: FrameworkDetection) -> String {
+        switch detection.kind {
+        case .php: "PHP-FPM"
+        case .staticFiles: "static files"
+        case .server: "no port yet"
+        case .unknown: "no port set"
         }
     }
 }

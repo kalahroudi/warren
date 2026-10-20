@@ -19,7 +19,7 @@ One row is one spec is one PR. Mockup: https://claude.ai/artifact/QdJZC1qARd8Sbc
 | 012 | Plan executor, progress events, command approvals | 3 Add site |
 | 013 | Templates and blank projects | 3 Add site |
 | 014 | GitHub import and env/secret prompts | 3 Add site |
-| 015 | Service manager and `ServiceDriver` interface (native) | 4 Services |
+| 015 | Process manager: starting sites, PHP and static serving, `ServiceDriver` interface (native) | 4 Services |
 | 016 | PostgreSQL and MySQL | 4 Services |
 | 017 | Redis, Mailpit, MinIO | 4 Services |
 | 018 | Service catalog as data | 4 Services |

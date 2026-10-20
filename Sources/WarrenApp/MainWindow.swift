@@ -6,6 +6,7 @@ struct MainWindowView: View {
     @ObservedObject var model: AppModel
     @ObservedObject var runtimes: RuntimesModel
     @ObservedObject var setupRun: SetupRunModel
+    @ObservedObject var siteRun: SiteRunModel
     let addSite: () -> Void
 
     var body: some View {
@@ -38,6 +39,12 @@ struct MainWindowView: View {
             }
             .interactiveDismissDisabled()
         }
+        .sheet(item: $siteRun.pendingApproval) { approval in
+            ApprovalSheet(approval: approval) { approved, trust in
+                siteRun.resolve(approval, approved: approved, trust: trust)
+            }
+            .interactiveDismissDisabled()
+        }
         .sheet(item: $setupRun.pendingApproval) { approval in
             ApprovalSheet(approval: approval) { approved, trust in
                 setupRun.resolve(approval, approved: approved, trust: trust)
@@ -49,7 +56,7 @@ struct MainWindowView: View {
     @ViewBuilder
     private var detail: some View {
         switch model.section {
-        case .sites: SitesView(model: model, runtimes: runtimes, setupRun: setupRun, addSite: addSite)
+        case .sites: SitesView(model: model, runtimes: runtimes, setupRun: setupRun, siteRun: siteRun, addSite: addSite)
         case .services: ServicesView(model: model)
         case .runtimes: RuntimesView(model: model, runtimes: runtimes)
         case .agents: AgentsView(model: model)
